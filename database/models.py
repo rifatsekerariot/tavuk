@@ -2,6 +2,16 @@ from sqlalchemy import Column, Integer, Float, String, DateTime, Boolean
 from sqlalchemy.sql import func
 from database.config import Base
 
+class Device(Base):
+    __tablename__ = "devices"
+    id = Column(String, primary_key=True, index=True)  # devEUI or unique ID
+    zone_id = Column(String, index=True)
+    vendor = Column(String)  # e.g. "milesight", "chirpstack"
+    model = Column(String)
+    protocol = Column(String)  # e.g. "lorawan_chirpstack", "generic_mqtt"
+    codec_id = Column(String)  # e.g. "milesight_direct", "chirpstack_generic"
+    is_active = Column(Boolean, default=True)
+
 class FarmSettings(Base):
     __tablename__ = 'farm_settings'
     id = Column(Integer, primary_key=True, index=True)

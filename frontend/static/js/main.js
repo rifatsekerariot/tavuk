@@ -651,6 +651,201 @@ function saveMortality() {
         }
     })
     .catch(err => {
+        document.getElementById('s-lon').value = marker.getLatLng().lng.toFixed(4);
+    });
+
+    // When clicked on map
+    map.on('click', function(e) {
+        marker.setLatLng(e.latlng);
+        document.getElementById('s-lat').value = e.latlng.lat.toFixed(4);
+        document.getElementById('s-lon').value = e.latlng.lng.toFixed(4);
+    });
+}
+
+function openSettings() {
+    document.getElementById('settings-modal').classList.remove('hidden');
+    // Important: leaflet needs to recalculate size if it was initialized in hidden div
+    setTimeout(() => {
+        if(map) map.invalidateSize();
+    }, 100);
+}
+
+function closeSettings() {
+    document.getElementById('settings-modal').classList.add('hidden');
+}
+
+function fetchSettings() {
+    fetch('/api/settings?t=' + new Date().getTime())
+        .then(r => r.json())
+        .then(data => {
+            const fields = [
+                'location_name', 'lat', 'lon', 'house_length', 'house_width',
+                'ridge_h', 'eaves_h', 'bird_count', 'bird_weight',
+                'fan_count', 'fan_capacity', 'feed_price', 'meat_price',
+                'electricity_price', 'mqtt_topic', 'sensor_count', 'flock_breed'
+            ];
+            fields.forEach(f => {
+                if (document.getElementById('s-' + f)) {
+                    document.getElementById('s-' + f).value = data[f] || '';
+                }
+            });
+            if (data.flock_start_date) {
+                document.getElementById('s-flock_start_date').value = data.flock_start_date.slice(0, 16);
+            }
+            
+            const fanSlider = document.getElementById('manual-fan-slider');
+            if (fanSlider && data.fan_count) {
+                fanSlider.max = data.fan_count;
+            }
+            
+            const demoToggle = document.getElementById('ui-demo-toggle');
+            if (demoToggle && data.demo_mode !== undefined) {
+                demoToggle.checked = data.demo_mode;
+            }
+            
+            const aiToggle = document.getElementById('ai-toggle-switch');
+            if (aiToggle) {
+                const enabled = data.ai_operator_enabled !== undefined ? data.ai_operator_enabled : true;
+                aiToggle.checked = enabled;
+                
+                const statusText = document.getElementById('ai-status-text');
+                const panel = document.getElementById('manual-control-panel');
+                if (enabled) {
+                    statusText.innerText = "AKTİF (Oto MPC)";
+                    statusText.className = "text-[10px] text-green-400 font-medium";
+                    panel.classList.add('opacity-50', 'pointer-events-none');
+                } else {
+                    statusText.innerText = "DEVRE DIŞI (Manuel)";
+                    statusText.className = "text-[10px] text-red-400 font-medium";
+                    panel.classList.remove('opacity-50', 'pointer-events-none');
+                }
+            }
+            
+            const manualFan = data.manual_active_fans !== undefined ? data.manual_active_fans : 2;
+            if (fanSlider) fanSlider.value = manualFan;
+            const fanVal = document.getElementById('manual-fan-val');
+            if (fanVal) fanVal.innerText = manualFan;
+            
+            const heaterSelect = document.getElementById('manual-heater-select');
+            if (heaterSelect && data.manual_heater_w !== undefined) {
+                if (data.manual_heater_w === 0.0) heaterSelect.value = "0.0";
+                else if (data.manual_heater_w === 250000.0) heaterSelect.value = "250000.0";
+                else if (data.manual_heater_w === 500000.0) heaterSelect.value = "500000.0";
+            }
+            
+            const padCheck = document.getElementById('manual-pad-check');
+            if (padCheck) padCheck.checked = data.manual_pad_cooling !== undefined ? data.manual_pad_cooling : false;
+            
+            const lat = data.lat || 38.4237;
+            const lon = data.lon || 27.1428;
+            initMap(lat, lon);
+        });
+}
+function saveSettings(e) {
+    e.preventDefault();
+    const payload = {
+        location_name: document.getElementById('s-location_name').value,
+        lat: parseFloat(document.getElementById('s-lat').value),
+        lon: parseFloat(document.getElementById('s-lon').value),
+        house_length: parseFloat(document.getElementById('s-house_length').value),
+        house_width: parseFloat(document.getElementById('s-house_width').value),
+        ridge_h: parseFloat(document.getElementById('s-ridge_h').value),
+        eaves_h: parseFloat(document.getElementById('s-eaves_h').value),
+        bird_count: parseInt(document.getElementById('s-bird_count').value),
+        bird_weight: parseFloat(document.getElementById('s-bird_weight').value),
+        flock_breed: document.getElementById('s-flock_breed').value,
+        flock_start_date: document.getElementById('s-flock_start_date').value ? new Date(document.getElementById('s-flock_start_date').value).toISOString() : null,
+        fan_count: parseInt(document.getElementById('s-fan_count').value),
+        fan_capacity: parseFloat(document.getElementById('s-fan_capacity').value),
+        feed_price: parseFloat(document.getElementById('s-feed_price').value),
+        meat_price: parseFloat(document.getElementById('s-meat_price').value),
+        electricity_price: parseFloat(document.getElementById('s-electricity_price').value),
+        mqtt_topic: document.getElementById('s-mqtt_topic').value,
+        sensor_count: parseInt(document.getElementById('s-sensor_count').value)
+    };
+
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(res => {
+        const s = document.getElementById('save-status');
+        s.classList.remove('hidden');
+        setTimeout(() => s.classList.add('hidden'), 3000);
+        
+        // Settings changed, instantly trigger a live fetch to refresh bio math
+        fetchLive();
+    });
+}
+
+// --------------------------------------------------
+// DATA RESET LOGIC
+// --------------------------------------------------
+function resetMockData() {
+    if (!confirm('Tüm geçmiş sensör verileri silinecek ve simülasyon sıfırdan başlayacak. Emin misiniz?')) {
+        return;
+    }
+    
+    fetch('/api/settings/reset', {
+        method: 'POST'
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.status === 'ok') {
+            alert(res.message);
+            fetchLive();
+        } else {
+            alert('Hata: ' + res.message);
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Sıfırlama başarısız oldu.');
+    });
+}
+
+// --------------------------------------------------
+// MORTALITY MODAL LOGIC
+// --------------------------------------------------
+function openMortalityModal() {
+    document.getElementById('mortality_input').value = 0;
+    document.getElementById('mortality-modal').classList.remove('hidden');
+}
+
+function closeMortalityModal() {
+    document.getElementById('mortality-modal').classList.add('hidden');
+}
+
+function saveMortality() {
+    const deadBirds = parseInt(document.getElementById('mortality_input').value);
+    if (isNaN(deadBirds) || deadBirds <= 0) {
+        alert('Lütfen geçerli bir ölü sayısı girin.');
+        return;
+    }
+
+    fetch('/api/mortality/report', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ dead_birds: deadBirds })
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.status === 'ok') {
+            alert(res.message);
+            closeMortalityModal();
+            // Optional: update Settings modal input if it is open
+            const birdInput = document.getElementById('s-bird_count');
+            if (birdInput) birdInput.value = res.new_bird_count;
+            fetchLive();
+        } else {
+            alert('Hata: ' + res.message);
+        }
+    })
+    .catch(err => {
         console.error(err);
         alert('Sunucuya ulaşılamadı.');
     });
@@ -674,4 +869,204 @@ function toggleDemoMode(checkbox) {
         console.error("Demo mode toggle error:", err);
         checkbox.checked = !isEnabled;
     });
+}
+
+// --------------------------------------------------
+// SETUP & IOT SETUP MODAL LOGIC
+// --------------------------------------------------
+function openSetup() {
+    const length = parseFloat(document.getElementById('s-house_length').value) || 100;
+    const width = parseFloat(document.getElementById('s-house_width').value) || 14;
+    const breed = document.getElementById('s-flock_breed').value || "Ross 308 (Etlik)";
+    const dateInput = document.getElementById('s-flock_start_date').value;
+    
+    document.getElementById('setup-length').value = length;
+    document.getElementById('setup-width').value = width;
+    document.getElementById('setup-breed').value = breed;
+    if (dateInput) {
+        document.getElementById('setup-start-date').value = dateInput.split('T')[0];
+    } else {
+        document.getElementById('setup-start-date').value = new Date().toISOString().split('T')[0];
+    }
+    
+    document.getElementById('setup-modal').classList.remove('hidden');
+    calculateOptimalLayout();
+}
+
+function closeSetup() {
+    document.getElementById('setup-modal').classList.add('hidden');
+}
+
+function openIotSetup() {
+    document.getElementById('iot-setup-modal').classList.remove('hidden');
+}
+
+function closeIotSetup() {
+    document.getElementById('iot-setup-modal').classList.add('hidden');
+}
+
+function calculateOptimalLayout() {
+    const length = parseFloat(document.getElementById('setup-length').value) || 0;
+    const width = parseFloat(document.getElementById('setup-width').value) || 0;
+    
+    if (length <= 0 || width <= 0) return;
+    
+    const sensorsPerRow = Math.max(2, Math.round(length / 20));
+    const rows = width > 18 ? 2 : 1;
+    const qtyTemp = sensorsPerRow * rows;
+    
+    document.getElementById('setup-sensor-count').innerText = `${qtyTemp} Adet`;
+    document.getElementById('setup-height-desc').innerText = "Sıcaklık ve Nem sensörleri hayvanların bulunduğu seviyede (yerden 20-30 cm yükseklikte) ve hava akımının doğrudan vurmadığı, duvardan en az 1 m uzakta konumlandırılmalıdır.";
+    
+    const container = document.getElementById('setup-canvas-container');
+    container.innerHTML = '';
+    
+    const houseDiv = document.createElement('div');
+    houseDiv.className = 'border-2 border-slate-700 bg-slate-100 rounded relative shadow-inner w-full h-[140px]';
+    
+    for (let r = 0; r < rows; r++) {
+        const topPercent = rows === 1 ? 50 : (r === 0 ? 30 : 70);
+        for (let s = 0; s < sensorsPerRow; s++) {
+            const leftPercent = ((s + 0.5) / sensorsPerRow) * 100;
+            
+            const sensorDot = document.createElement('div');
+            sensorDot.className = 'absolute w-3.5 h-3.5 bg-indigo-600 rounded-full flex items-center justify-center -translate-x-1/2 -translate-y-1/2 cursor-help shadow';
+            sensorDot.style.left = leftPercent + '%';
+            sensorDot.style.top = topPercent + '%';
+            sensorDot.title = `Sensör Bölgesi ${r * sensorsPerRow + s + 1}`;
+            
+            const pulseRing = document.createElement('span');
+            pulseRing.className = 'absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75 animate-ping';
+            sensorDot.appendChild(pulseRing);
+            
+            const dotInner = document.createElement('span');
+            dotInner.className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-600 border border-white';
+            sensorDot.appendChild(dotInner);
+            
+            const label = document.createElement('span');
+            label.className = 'absolute -top-5 text-[8px] font-bold text-indigo-800 bg-white px-1 rounded shadow-sm border border-indigo-200';
+            label.innerText = `S${r * sensorsPerRow + s + 1}`;
+            sensorDot.appendChild(label);
+            
+            houseDiv.appendChild(sensorDot);
+        }
+    }
+    
+    container.appendChild(houseDiv);
+}
+
+function saveSetup() {
+    const length = parseFloat(document.getElementById('setup-length').value);
+    const width = parseFloat(document.getElementById('setup-width').value);
+    const breed = document.getElementById('setup-breed').value;
+    const startDate = document.getElementById('setup-start-date').value;
+    
+    if (isNaN(length) || isNaN(width) || length <= 0 || width <= 0) {
+        alert('Lütfen geçerli ebatlar girin.');
+        return;
+    }
+    
+    const sensorsPerRow = Math.max(2, Math.round(length / 20));
+    const rows = width > 18 ? 2 : 1;
+    const qtyTemp = sensorsPerRow * rows;
+    
+    const payload = {
+        house_length: length,
+        house_width: width,
+        flock_breed: breed,
+        flock_start_date: startDate ? new Date(startDate).toISOString() : null,
+        sensor_count: qtyTemp
+    };
+    
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.status === 'ok') {
+            const status = document.getElementById('setup-save-status');
+            status.classList.remove('hidden');
+            setTimeout(() => status.classList.add('hidden'), 3000);
+            fetchSettings();
+            fetchLive();
+        } else {
+            alert('Hata: ' + res.message);
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Sunucu hatası.');
+    });
+}
+
+function downloadSetupPDF() {
+    const element = document.getElementById('setup-export-area');
+    const opt = {
+        margin: 10,
+        filename: 'kumes_kurulum_krokisi.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+    };
+    html2pdf().set(opt).from(element).save();
+}
+
+// --------------------------------------------------
+// ALARM HISTORY MODAL LOGIC
+// --------------------------------------------------
+function openAlarmHistory() {
+    document.getElementById('alarm-history-modal').classList.remove('hidden');
+    fetchAlarms();
+}
+
+// Ensure globally accessible
+window.openSetup = openSetup;
+window.closeSetup = closeSetup;
+window.openIotSetup = openIotSetup;
+window.closeIotSetup = closeIotSetup;
+window.calculateOptimalLayout = calculateOptimalLayout;
+window.saveSetup = saveSetup;
+window.downloadSetupPDF = downloadSetupPDF;
+window.openAlarmHistory = openAlarmHistory;
+
+function closeAlarmHistory() {
+    document.getElementById('alarm-history-modal').classList.add('hidden');
+}
+window.closeAlarmHistory = closeAlarmHistory;
+
+function fetchAlarms() {
+    const list = document.getElementById('alarm-history-list');
+    list.innerHTML = '<div class="text-[12px] text-ink-light">Yükleniyor...</div>';
+    
+    fetch('/api/dashboard/alarms')
+        .then(r => r.json())
+        .then(data => {
+            if (!data || data.length === 0) {
+                list.innerHTML = '<div class="text-[12px] text-ink-muted text-center py-4">Kayıtlı alarm bulunmuyor.</div>';
+                return;
+            }
+            
+            list.innerHTML = data.map(alarm => {
+                let badgeColor = "bg-slate-100 text-slate-700";
+                if (alarm.type === "danger" || alarm.type === "critical") badgeColor = "bg-red-100 text-red-700";
+                else if (alarm.type === "warning") badgeColor = "bg-amber-100 text-amber-700";
+                
+                return `
+                    <div class="panel mb-3 bg-white">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="text-[9px] font-mono text-ink-light">${alarm.timestamp}</span>
+                            <span class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${badgeColor}">${alarm.type}</span>
+                        </div>
+                        <h4 class="text-[12px] font-bold text-ink mb-1">${alarm.title}</h4>
+                        <p class="text-[11px] text-ink-muted leading-relaxed">${alarm.desc}</p>
+                    </div>
+                `;
+            }).join('');
+        })
+        .catch(err => {
+            console.error(err);
+            list.innerHTML = '<div class="text-[12px] text-red-600">Alarmlar yüklenirken hata oluştu.</div>';
+        });
 }

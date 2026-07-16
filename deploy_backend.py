@@ -10,11 +10,19 @@ ssh = paramiko.SSHClient()
 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 ssh.connect(host, username=user, password=password, timeout=10)
 
+print(f"Creating directory {project_dir}/core/adapters on remote server...")
+ssh.exec_command(f"mkdir -p {project_dir}/core/adapters")
+
 sftp = ssh.open_sftp()
 
 files_to_upload = [
     ("d:/Antigravity/tavuk/core/biology.py", f"{project_dir}/core/biology.py"),
     ("d:/Antigravity/tavuk/core/mqtt_listener.py", f"{project_dir}/core/mqtt_listener.py"),
+    ("d:/Antigravity/tavuk/core/adapters/__init__.py", f"{project_dir}/core/adapters/__init__.py"),
+    ("d:/Antigravity/tavuk/core/adapters/base.py", f"{project_dir}/core/adapters/base.py"),
+    ("d:/Antigravity/tavuk/core/adapters/milesight.py", f"{project_dir}/core/adapters/milesight.py"),
+    ("d:/Antigravity/tavuk/core/adapters/chirpstack.py", f"{project_dir}/core/adapters/chirpstack.py"),
+    ("d:/Antigravity/tavuk/core/adapters/registry.py", f"{project_dir}/core/adapters/registry.py"),
     ("d:/Antigravity/tavuk/database/config.py", f"{project_dir}/database/config.py"),
     ("d:/Antigravity/tavuk/database/models.py", f"{project_dir}/database/models.py"),
     ("d:/Antigravity/tavuk/api/main.py", f"{project_dir}/api/main.py"),

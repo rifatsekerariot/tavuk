@@ -3,7 +3,7 @@ import json
 import os
 from sqlalchemy.orm import Session
 from database.config import SessionLocal
-from database.models import IoTData, FarmSettings
+from database.models import IoTData, FarmSettings, Device
 from core.biology import calculate_biology_and_finance
 
 MQTT_BROKER = os.getenv('MQTT_BROKER', 'localhost')
@@ -51,39 +51,77 @@ def on_message(client, userdata, msg):
             virtual_operator_state["diagnostic_alarm"] = payload.get("diagnostic_alarm")
             return
             
-        obj = payload.get('object', payload)
-        
-        # Determine zone from topic (e.g., farm/sensors/zone-2)
-        # Or from payload (e.g., {"zone": "zone-2"})
-        zone_id = obj.get('zone', obj.get('zone_id', None))
-        if not zone_id:
-            # Fallback to topic suffix
+        # Determine device ID from payload or topic
+        device_id = None
+        if "deviceInfo" in payload:
+            device_id = payload["deviceInfo"].get("deviceName") or payload["deviceInfo"].get("devEui")
+        if not device_id:
+            device_id = payload.get("deviceName") or payload.get("devEui")
+        if not device_id:
+            # Fallback to topic parts
             parts = topic.split('/')
-            zone_id = parts[-1] if len(parts) > 1 else 'zone-1'
-            if not zone_id.startswith('zone'):
-                zone_id = f"zone-{zone_id}"
-                
-        # Ensure it's in the format 'zone-X'
-        if isinstance(zone_id, int) or (isinstance(zone_id, str) and zone_id.isdigit()):
-            zone_id = f"zone-{zone_id}"
-            
-        t_in = obj.get('temperature', obj.get('t_in', 25.0))
-        rh_in = obj.get('humidity', obj.get('rh_in', 50.0))
-        nh3_ppm = obj.get('nh3', obj.get('nh3_ppm', 0.0))
-        co2_ppm = obj.get('co2', obj.get('co2_ppm', 400.0))
-        
+            device_id = parts[-1] if len(parts) > 1 else 'zone-1'
+            if not device_id.startswith('zone') and not device_id.startswith('UG65'):
+                device_id = f"UG65_{device_id}"
+
         db = SessionLocal()
         try:
-            iot_record = IoTData(
-                zone_id=zone_id,
-                t_in=t_in,
-                rh_in=rh_in,
-                nh3_ppm=nh3_ppm,
-                co2_ppm=co2_ppm
-            )
-            db.add(iot_record)
-            db.commit()
-            print(f'Saved IoT Data [{zone_id}]: T={t_in}, RH={rh_in}, NH3={nh3_ppm}, CO2={co2_ppm}')
+            device = db.query(Device).filter(Device.id == device_id).first()
+            if not device:
+                # Device is unregistered!
+                from core.adapters.registry import adapter_registry
+                guessed_codec = adapter_registry.resolve_fallback(topic, payload)
+                guessed_vendor = "Unknown"
+                if guessed_codec:
+                    guessed_vendor = guessed_codec.split('_')[0].capitalize()
+                
+                from database.models import AlarmHistory
+                alarm = AlarmHistory(
+                    type="warning",
+                    title="Unregistered Device Detected",
+                    desc=f"Payload received from unregistered device ID '{device_id}' on topic '{topic}'. Guessed vendor profile: {guessed_vendor}. Data discarded."
+                )
+                db.add(alarm)
+                db.commit()
+                print(f"WARNING: Discarded payload from unregistered device '{device_id}'")
+                return
+                
+            from core.adapters.registry import adapter_registry
+            adapter = adapter_registry.get_by_codec(device.codec_id)
+            if not adapter:
+                print(f"ERROR: Adapter not found for codec_id '{device.codec_id}'")
+                return
+                
+            readings = adapter.decode(topic, payload, device)
+            
+            # Reduce to IoTData (long-to-wide format mapping)
+            t_in, rh_in, nh3_ppm, co2_ppm = None, None, None, None
+            ts = None
+            for r in readings:
+                if r.quality == "ok":
+                    if not ts:
+                        ts = r.timestamp
+                    if r.metric == "temperature":
+                        t_in = r.value
+                    elif r.metric == "humidity":
+                        rh_in = r.value
+                    elif r.metric == "nh3":
+                        nh3_ppm = r.value
+                    elif r.metric == "co2":
+                        co2_ppm = r.value
+            
+            if t_in is not None and rh_in is not None:
+                iot_record = IoTData(
+                    zone_id=device.zone_id,
+                    t_in=t_in,
+                    rh_in=rh_in,
+                    nh3_ppm=nh3_ppm,
+                    co2_ppm=co2_ppm,
+                    timestamp=ts
+                )
+                db.add(iot_record)
+                db.commit()
+                print(f"Saved IoT Data [{device.zone_id}] from device [{device.id}]: T={t_in}, RH={rh_in}, NH3={nh3_ppm}, CO2={co2_ppm}")
         finally:
             db.close()
     except Exception as e:

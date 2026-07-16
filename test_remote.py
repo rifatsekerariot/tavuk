@@ -62,16 +62,20 @@ def test_api():
     r = requests.post(f"{API_URL}/settings", json={"demo_mode": True}, verify=False)
     
     # Wait for mock scripts to publish data
-    print("Waiting for mock scripts to publish data (7 seconds)...")
-    time.sleep(7)
-    
-    # 5. Check Live Endpoint for data
-    r = requests.get(f"{API_URL}/dashboard/live", verify=False)
-    live = r.json()
-    if isinstance(live, dict) and 'raw' in live:
-        print("PASS: Data received from mock sensors!")
-        print("Current Temp:", live['raw'].get('t_in'))
-    else:
+    print("Waiting for mock scripts to publish data...")
+    data_received = False
+    for attempt in range(15):
+        print(f"Attempt {attempt + 1}/15: Checking live dashboard...")
+        r = requests.get(f"{API_URL}/dashboard/live", verify=False)
+        live = r.json()
+        if isinstance(live, dict) and 'raw' in live:
+            print("PASS: Data received from mock sensors!")
+            print("Current Temp:", live['raw'].get('t_in'))
+            data_received = True
+            break
+        time.sleep(5)
+        
+    if not data_received:
         print("FAIL: No data received after enabling demo mode.", live)
 
 if __name__ == '__main__':

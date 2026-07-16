@@ -13,7 +13,7 @@ import httpx
 import time
 import statistics
 from database.config import get_db, engine, Base
-from database.models import FarmSettings, IoTData, AlarmHistory
+from database.models import FarmSettings, IoTData, AlarmHistory, Device
 from core.mqtt_listener import start_mqtt_listener, virtual_operator_state
 from core.biology import calculate_biology_and_finance, calculate_dynamic_weight
 
@@ -35,6 +35,30 @@ except Exception:
     pass
 
 Base.metadata.create_all(bind=engine)
+
+def seed_mock_devices():
+    from database.config import SessionLocal
+    db = SessionLocal()
+    try:
+        for i in range(1, 7):
+            dev_id = f"UG65_zone-{i}"
+            if not db.query(Device).filter(Device.id == dev_id).first():
+                dev = Device(
+                    id=dev_id,
+                    zone_id=f"zone-{i}",
+                    vendor="milesight",
+                    model="UG65",
+                    protocol="generic_mqtt",
+                    codec_id="milesight_direct"
+                )
+                db.add(dev)
+        db.commit()
+    except Exception as e:
+        print(f"Error seeding mock devices: {e}")
+    finally:
+        db.close()
+
+seed_mock_devices()
 
 app = FastAPI(title='ARIOT IoT Dashboard')
 
