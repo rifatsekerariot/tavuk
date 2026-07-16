@@ -112,7 +112,18 @@ def calculate_biology_and_finance(
     total_dead_birds = reported_mortality + int(math.ceil(mortality_rate * initial_bird_count))
     surviving_birds = initial_bird_count - total_dead_birds
 
-    base_fcr = 1.55
+    # Dynamic base FCR based on age (starts around 0.8 and rises to ~1.55 at day 35)
+    is_layer = "Yumurtacı" in breed
+    if not is_layer:
+        if bird_age < 7.0:
+            base_fcr = 0.8 + (bird_age * 0.015)
+        elif bird_age < 21.0:
+            base_fcr = 0.9 + (bird_age - 7.0) * 0.025
+        else:
+            base_fcr = 1.25 + (bird_age - 21.0) * 0.0214
+    else:
+        base_fcr = 2.1 # Layers default FCR
+
     # Historical FCR penalty from dead birds that ate food but produced no meat
     # Approximation: each dead bird ate about (bird_weight * base_fcr) kg of feed
     dead_bird_feed_waste = reported_mortality * bird_weight * base_fcr
@@ -391,7 +402,7 @@ def calculate_biology_and_finance(
     # Ancak "Yem İsrafı Alarmı" veya "Üstün Sürü Performansı" success/warning tipleri de actions'ı doldurur.
     # test_ammonia_poisoning'te ise actions'ta 'Amonyak Zehirlenmesi' olması istenir.
     # Bu ayrımı tam sağlamak için:
-    has_any_serious = any(a.get('type') in ['danger', 'critical'] or a.get('title') in ["Amonyak Zehirlenmesi", "Kritik Ölüm Riski", "Yüksek Sıcaklık Stresi", "Düşük Sıcaklık Riski", "Aşırı Isıtma Maliyeti & Termal Şok", "Ped Pompa Arızası", "Soğutma Pedi Kireçlenmesi (Scaling)", "Kuru Bölge / Kanallanma (Dry Channeling)"] for a in actions)
+    has_any_serious = any(a.get('type') in ['danger', 'critical'] or a.get('title') in ["Amonyak Zehirlenmesi", "Kritik Ölüm Riski", "Yüksek Sıcaklık Stresi", "Düşük Sıcaklık Riski", "Aşırı Isıtma Maliyeti & Termal Şok", "Ped Pompa Arızası", "Soğutma Pedi Kireçlenmesi (Scaling)", "Kuru Bölge / Kanallanma (Dry Channeling)"] or "Predictive AI" in a.get('title', '') for a in actions)
     if not has_any_serious:
         # Tali alarmları temizleyip sadece Optimum Koşullar yapalım
         actions = [{

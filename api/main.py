@@ -477,7 +477,7 @@ def get_live_data(db: Session = Depends(get_db)):
         recorded_weight=settings.bird_weight, 
         current_age_days=bird_age_days, 
         breed=settings.flock_breed,
-        age_days_at_record=age_days_at_record
+        age_days_at_record=0.0
     )
 
     # 4.5 Get actual fan state
