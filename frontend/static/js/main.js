@@ -1104,7 +1104,7 @@ function applyUserRole() {
                     roleBadge.innerText = 'DEMO (SALT OKUR)';
                     roleBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded shadow-sm bg-slate-100 text-slate-600 uppercase';
                     
-                    const hideElements = ['btn-setup', 'btn-settings', 'btn-fire', 'ui-demo-mode-container'];
+                    const hideElements = ['btn-setup', 'btn-settings', 'btn-iot-setup', 'btn-fire', 'ui-demo-mode-container'];
                     hideElements.forEach(id => {
                         const el = document.getElementById(id);
                         if (el) el.classList.add('hidden');

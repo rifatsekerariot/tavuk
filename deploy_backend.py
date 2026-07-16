@@ -31,6 +31,7 @@ files_to_upload = [
     ("d:/Antigravity/tavuk/frontend/templates/landing.html", f"{project_dir}/frontend/templates/landing.html"),
     ("d:/Antigravity/tavuk/frontend/templates/manual.html", f"{project_dir}/frontend/templates/manual.html"),
     ("d:/Antigravity/tavuk/frontend/static/js/main.js", f"{project_dir}/frontend/static/js/main.js"),
+    ("d:/Antigravity/tavuk/frontend/static/arkaplan.png", f"{project_dir}/frontend/static/arkaplan.png"),
     ("d:/Antigravity/tavuk/frontend/static/og_cover.png", f"{project_dir}/frontend/static/og_cover.png"),
     ("d:/Antigravity/tavuk/docker-compose.yml", f"{project_dir}/docker-compose.yml"),
     ("d:/Antigravity/tavuk/mosquitto.conf", f"{project_dir}/mosquitto.conf"),

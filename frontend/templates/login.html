@@ -13,7 +13,8 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background: radial-gradient(circle at top right, #1e293b 0%, #0f172a 100%);
+            background: url('/static/arkaplan.png') no-repeat center center fixed;
+            background-size: cover;
             height: 100vh;
             display: flex;
             align-items: center;
@@ -21,32 +22,32 @@
             overflow: hidden;
         }
         .glass-panel {
-            background: rgba(30, 41, 59, 0.4);
+            background: rgba(15, 23, 42, 0.75);
             backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            border: 1px solid rgba(156, 28, 140, 0.3);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
         }
         .btn-gradient {
-            background: linear-gradient(135deg, #38bdf8 0%, #0369a1 100%);
+            background: linear-gradient(135deg, #d946ef 0%, #9c1c8c 100%);
             transition: all 0.25s ease;
         }
         .btn-gradient:hover {
             transform: translateY(-1px);
-            box-shadow: 0 10px 20px -10px rgba(56, 189, 248, 0.5);
-            background: linear-gradient(135deg, #7dd3fc 0%, #0284c7 100%);
+            box-shadow: 0 10px 20px -10px rgba(217, 70, 239, 0.5);
+            background: linear-gradient(135deg, #f0abfc 0%, #701a75 100%);
         }
     </style>
 </head>
-<body class="selection:bg-sky-500 selection:text-white">
+<body class="selection:bg-fuchsia-500 selection:text-white">
     <div class="glass-panel w-full max-w-[420px] rounded-2xl p-8 relative overflow-hidden animate-fade-in">
         <!-- Ambient background glow inside panel -->
-        <div class="absolute -top-[50px] -right-[50px] w-[150px] h-[150px] bg-sky-500/10 rounded-full blur-[40px] pointer-events-none"></div>
-        <div class="absolute -bottom-[50px] -left-[50px] w-[150px] h-[150px] bg-indigo-500/10 rounded-full blur-[40px] pointer-events-none"></div>
+        <div class="absolute -top-[50px] -right-[50px] w-[150px] h-[150px] bg-fuchsia-500/10 rounded-full blur-[40px] pointer-events-none"></div>
+        <div class="absolute -bottom-[50px] -left-[50px] w-[150px] h-[150px] bg-fuchsia-500/10 rounded-full blur-[40px] pointer-events-none"></div>
 
         <!-- Logo / Brand -->
         <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-12 h-12 bg-sky-500/10 border border-sky-500/20 rounded-xl mb-4 shadow-[0_0_20px_rgba(56,189,248,0.1)]">
-                <div class="w-3.5 h-3.5 bg-sky-400 rounded-full animate-pulse"></div>
+            <div class="inline-flex items-center justify-center w-12 h-12 bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-xl mb-4 shadow-[0_0_20px_rgba(217,70,239,0.2)]">
+                <div class="w-3.5 h-3.5 bg-fuchsia-400 rounded-full animate-pulse"></div>
             </div>
             <h1 class="text-xl font-bold tracking-tight text-white">ARIOT Karar Destek</h1>
             <p class="text-xs text-slate-400 mt-1">Lütfen kimlik bilgilerinizi girerek oturum açın.</p>
@@ -62,22 +63,22 @@
             <div>
                 <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Kullanıcı Adı</label>
                 <input type="text" id="username" required placeholder="admin veya demo" 
-                       class="w-full bg-slate-900/60 border border-slate-700/50 focus:border-sky-500 rounded-lg px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition-all duration-150">
+                       class="w-full bg-slate-900/60 border border-slate-700/50 focus:border-fuchsia-500 rounded-lg px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition-all duration-150">
             </div>
 
             <div>
                 <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Şifre</label>
                 <input type="password" id="password" required placeholder="••••••••" 
-                       class="w-full bg-slate-900/60 border border-slate-700/50 focus:border-sky-500 rounded-lg px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition-all duration-150">
+                       class="w-full bg-slate-900/60 border border-slate-700/50 focus:border-fuchsia-500 rounded-lg px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition-all duration-150">
             </div>
 
-            <button type="submit" class="w-full btn-gradient text-white py-3.5 rounded-lg text-sm font-semibold tracking-wide transition-all shadow-[0_4px_12px_rgba(3,105,161,0.2)]">
+            <button type="submit" class="w-full btn-gradient text-white py-3.5 rounded-lg text-sm font-semibold tracking-wide transition-all shadow-[0_4px_12px_rgba(156,28,140,0.3)]">
                 Giriş Yap
             </button>
         </form>
 
         <div class="mt-6 pt-6 border-t border-slate-800 flex justify-between text-[11px] text-slate-400">
-            <span>Demo Şifresi: <code class="bg-slate-900/60 px-1.5 py-0.5 rounded text-sky-400">demo123</code></span>
+            <span>Demo Şifresi: <code class="bg-slate-900/60 px-1.5 py-0.5 rounded text-fuchsia-400">demo123</code></span>
             <span>v2.1.0</span>
         </div>
     </div>
