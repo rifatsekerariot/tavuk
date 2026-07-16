@@ -1,0 +1,22 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Local DB & JSON state / outputs
+*.db
+*.json
+*.png
+*.mp4
+*.tar.gz
+*.pt
+uploads/
+scratch/
+yedek/
+.agents/

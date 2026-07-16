@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARIOT | DSS</title>
+    <meta name="description" content="ARIOT Decision Support System">
+    <!-- Tailwind & ApexCharts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <!-- Leaflet JS for Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        base: '#FAFAFA', // Calm tech background
+                        panel: '#FFFFFF',
+                        border: '#E2E8F0',
+                        ink: {
+                            DEFAULT: '#0F172A',
+                            muted: '#64748B',
+                            light: '#94A3B8'
+                        },
+                        brand: {
+                            DEFAULT: '#1E293B', // Charcoal/Graphite
+                            accent: '#2D3B2E' // Earthy green accent
+                        }
+                    },
+                    boxShadow: {
+                        'premium': '0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02)',
+                        'modal': '0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer base {
+            body { 
+                @apply bg-base text-ink antialiased;
+            }
+        }
+        
+        /* High density tabular numbers */
+        .tabular-data {
+            font-family: 'JetBrains Mono', monospace;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+        }
+        
+        /* Premium Card Styles */
+        .panel { 
+            @apply bg-panel border border-border rounded-md shadow-premium p-4;
+        }
+
+        /* Subtle dividers instead of borders inside panels where possible */
+        .divider {
+            @apply h-[1px] bg-border w-full;
+        }
+        
+        /* Tick Animation - highly subtle */
+        @keyframes tick-up {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-2px); color: #475569; }
+            100% { transform: translateY(0); }
+        }
+        .tick-animate.ticking {
+            animation: tick-up 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Modals - Clean backdrop */
+        .modal-overlay { 
+            background: rgba(15, 23, 42, 0.4); 
+            backdrop-filter: blur(2px);
+        }
+        
+        /* Minimal Inputs */
+        .settings-input { 
+            width: 100%; 
+            padding: 6px 10px; 
+            border: 1px solid theme('colors.border'); 
+            border-radius: 4px; 
+            font-size: 13px; 
+            outline: none; 
+            transition: all 0.15s ease;
+            background: theme('colors.base');
+            color: theme('colors.ink.DEFAULT');
+            font-family: 'Inter', sans-serif;
+        }
+        .settings-input:focus { 
+            border-color: theme('colors.brand.DEFAULT'); 
+            box-shadow: 0 0 0 1px theme('colors.brand.DEFAULT'); 
+        }
+        
+        /* Clean Buttons */
+        .btn-primary { 
+            background: theme('colors.brand.DEFAULT'); 
+            color: white; 
+            padding: 6px 14px; 
+            border-radius: 4px; 
+            font-weight: 500; 
+            font-size: 13px; 
+            transition: background 0.15s ease; 
+        }
+        .btn-primary:hover { background: #000000; }
+
+        .btn-secondary { 
+            background: white; 
+            color: theme('colors.ink.DEFAULT'); 
+            padding: 6px 14px; 
+            border: 1px solid theme('colors.border');
+            border-radius: 4px; 
+            font-weight: 500; 
+            font-size: 13px; 
+            transition: all 0.15s ease; 
+        }
+        .btn-secondary:hover { background: theme('colors.base'); border-color: #CBD5E1; }
+        
+        /* Section Labels */
+        .section-label { 
+            font-size: 11px; 
+            font-weight: 600; 
+            letter-spacing: 0.04em; 
+            text-transform: uppercase; 
+            color: theme('colors.ink.muted'); 
+            margin-bottom: 12px; 
+            padding-bottom: 8px; 
+            border-bottom: 1px solid theme('colors.border'); 
+        }
+        
+        /* Map Container */
+        #map { height: 200px; width: 100%; border-radius: 4px; border: 1px solid theme('colors.border'); z-index: 10; }
+
+        /* Scrollbar */
+        .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+        /* Dark Panel for AI/SCADA */
+        .dark-panel {
+            background: #111827; /* Gray-900 */
+            border: 1px solid #374151; /* Gray-700 */
+            border-radius: 6px;
+            color: #F9FAFB;
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-gray-200 selection:text-black">
+
+<!-- SETTINGS MODAL -->
+<div id="settings-modal" class="fixed inset-0 z-50 hidden modal-overlay flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-modal w-full max-w-4xl max-h-[90vh] flex flex-col" id="settings-modal-content">
+        <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+            <div>
+                <h2 class="text-sm font-semibold text-ink">Sistem Konfigürasyonu</h2>
+            </div>
+            <button onclick="closeSettings()" class="text-ink-muted hover:text-ink transition-colors">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+        </div>
+
+        <div class="overflow-y-auto custom-scroll">
+            <form id="settings-form" onsubmit="saveSettings(event)" class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Sol Kolon -->
+                    <div class="space-y-8">
+                        <div>
+                            <p class="section-label">Fiziksel Parametreler</p>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="text-[11px] font-medium text-ink-muted block mb-1">Uzunluk (m)</label><input type="number" step="0.1" id="s-house_length" class="settings-input"></div>
+                                <div><label class="text-[11px] font-medium text-ink-muted block mb-1">Genişlik (m)</label><input type="number" step="0.1" id="s-house_width" class="settings-input"></div>
+                                <div><label class="text-[11px] font-medium text-ink-muted block mb-1">Tepe Yükseklik (m)</label><input type="number" step="0.1" id="s-ridge_h" class="settings-input"></div>
+                                <div><label class="text-[11px] font-medium text-ink-muted block mb-1">Saçak Yükseklik (m)</label><input type="number" step="0.1" id="s-eaves_h" class="settings-input"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p class="section-label">Sürü Metrikleri</p>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="text-[11px] font-medium text-ink-muted block mb-1">Mevcut (adet)</label><input type="number" id="s-bird_count" class="settings-input"></div>
+                                <div><label class="text-[11px] font-medium text-ink-muted block mb-1">Canlı Ağırlık (kg)</label><input type="number" step="0.001" id="s-bird_weight" class="settings-input"></div>
+                                <div><label class="text-[11px] font-medium text-ink-muted block mb-1">Sürü Başlangıcı</label><input type="datetime-local" id="s-flock_start_date" class="settings-input"></div>
+                                <div>
+                                    <label class="text-[11px] font-medium text-ink-muted block mb-1">Tavuk Irkı</label>
+                                    <select id="s-flock_breed" class="settings-input">
+                                        <optgroup label="Etlik (Broiler)">
+                                            <option value="Ross 308 (Etlik)">Ross 308</option>
+                                            <option value="Cobb 500 (Etlik)">Cobb 500</option>
+                                        </optgroup>
+                                        <optgroup label="Yumurtacı (Layer)">
+                                            <option value="Lohmann Brown (Yumurtacı)">Lohmann Brown</option>
+                                            <option value="Atak-S (Yumurtacı)">Atak-S</option>
+                                            <option value="LSL Beyaz (Yumurtacı)">LSL Beyaz</option>
+                                        </optgroup>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p class="section-label">Havalandırma</p>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="text-[11px] font-medium text-ink-muted block mb-1">Fan Sayısı</label><input type="number" id="s-fan_count" class="settings-input"></div>
+                                <div><label class="text-[11px] font-medium text-ink-muted block mb-1">Fan Kapasitesi (m³/h)</label><input type="number" id="s-fan_capacity" class="settings-input"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sağ Kolon -->
+                    <div class="space-y-8">
+                        <div>
+                            <p class="section-label">Ticari Girdiler</p>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div><label class="text-[11px] font-medium text-ink-muted block mb-1">Yem (₺/kg)</label><input type="number" step="0.01" id="s-feed_price" class="settings-input"></div>
+                                <div><label class="text-[11px] font-medium text-ink-muted block mb-1">Et (₺/kg)</label><input type="number" step="0.01" id="s-meat_price" class="settings-input"></div>
+                                <div><label class="text-[11px] font-medium text-ink-muted block mb-1">Elektrik (₺/kWh)</label><input type="number" step="0.01" id="s-electricity_price" class="settings-input"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p class="section-label">Lokasyon</p>
+                            <div id="map" class="mb-3"></div>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div><label class="text-[11px] font-medium text-ink-muted block mb-1">Tesis Adı</label><input type="text" id="s-location_name" class="settings-input"></div>
+                                <div><label class="text-[11px] font-medium text-ink-muted block mb-1">Lat</label><input type="number" step="0.0001" id="s-lat" class="settings-input" readonly></div>
+                                <div><label class="text-[11px] font-medium text-ink-muted block mb-1">Lon</label><input type="number" step="0.0001" id="s-lon" class="settings-input" readonly></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p class="section-label">IoT</p>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="text-[11px] font-medium text-ink-muted block mb-1">MQTT Topic</label><input type="text" id="s-mqtt_topic" class="settings-input"></div>
+                                <div><label class="text-[11px] font-medium text-ink-muted block mb-1">Zone Sayısı</label><input type="number" id="s-sensor_count" class="settings-input"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        
+        <div class="flex justify-between items-center px-6 py-4 border-t border-gray-200 bg-gray-50/50 rounded-b-lg">
+            <button type="button" onclick="resetMockData()" class="text-[12px] font-medium text-red-600 hover:text-red-700 transition-colors">
+                Geçmişi Sıfırla
+            </button>
+            <div class="flex items-center gap-3">
+                <span id="save-status" class="text-[12px] text-emerald-600 font-medium hidden">Güncellendi</span>
+                <button type="button" onclick="document.getElementById('settings-form').requestSubmit()" class="btn-primary">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SETUP MODAL -->
+<div id="setup-modal" class="fixed inset-0 z-50 hidden modal-overlay flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-modal w-full max-w-5xl max-h-[90vh] flex flex-col">
+        <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+            <div>
+                <h2 class="text-sm font-semibold text-ink">Kurulum Asistanı</h2>
+            </div>
+            <button onclick="closeSetup()" class="text-ink-muted hover:text-ink transition-colors">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 4L4 12M4 4L12 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="md:col-span-1 space-y-6">
+                <div class="panel">
+                    <p class="section-label">Kümes Ebatları</p>
+                    <div class="space-y-4">
+                        <div><label class="text-[11px] font-medium text-ink-muted block mb-1">Uzunluk (m)</label><input type="number" id="setup-length" class="settings-input" oninput="calculateOptimalLayout()"></div>
+                        <div><label class="text-[11px] font-medium text-ink-muted block mb-1">Genişlik (m)</label><input type="number" id="setup-width" class="settings-input" oninput="calculateOptimalLayout()"></div>
+                        <div><label class="text-[11px] font-medium text-ink-muted block mb-1">Sürü Başlangıç</label><input type="date" id="setup-start-date" class="settings-input" oninput="calculateOptimalLayout()"></div>
+                        <div>
+                            <label class="text-[11px] font-medium text-ink-muted block mb-1">Tavuk Irkı</label>
+                            <select id="setup-breed" class="settings-input" oninput="calculateOptimalLayout()">
+                                <option value="Ross 308 (Etlik)">Ross 308</option>
+                                <option value="Cobb 500 (Etlik)">Cobb 500</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-6 border-t border-gray-100 pt-4">
+                        <p class="text-[10px] uppercase text-ink-muted font-semibold mb-1">Önerilen Sensör</p>
+                        <p class="text-2xl font-mono text-ink" id="setup-sensor-count">--</p>
+                    </div>
+                </div>
+                <div id="setup-save-status" class="text-[12px] text-emerald-600 font-medium hidden">Senkronize Edildi</div>
+                <div class="flex flex-col gap-2">
+                    <button onclick="saveSetup()" class="btn-primary w-full justify-center text-center">Planı Kaydet</button>
+                    <button onclick="downloadSetupPDF()" class="btn-secondary w-full justify-center text-center">PDF İndir</button>
+                </div>
+            </div>
+
+            <div class="md:col-span-2 flex flex-col" id="setup-export-area">
+                <p class="section-label">Yerleşim Krokisi</p>
+                <div class="flex-1 bg-base border border-border rounded-md relative flex items-center justify-center p-8 min-h-[300px] overflow-visible perspective-[1000px]" id="setup-canvas-container">
+                    <!-- Canvas -->
+                </div>
+                <div class="mt-4 p-3 bg-white border border-border rounded flex items-start gap-3">
+                    <span class="text-[11px] font-semibold text-ink">Z-Ekseni:</span>
+                    <p class="text-[11px] text-ink-muted" id="setup-height-desc">...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- IOT SETUP MODAL -->
+<div id="iot-setup-modal" class="fixed inset-0 z-50 hidden modal-overlay flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-modal w-full max-w-3xl max-h-[90vh] flex flex-col">
+        <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+            <h2 class="text-sm font-semibold text-ink">IoT Cihaz Kurulum Rehberi</h2>
+            <button onclick="closeIotSetup()" class="text-ink-muted hover:text-ink transition-colors">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+        </div>
+        <div class="overflow-y-auto custom-scroll p-6 space-y-6">
+            
+            <div>
+                <h3 class="text-[12px] font-semibold text-ink uppercase tracking-wider mb-2">1. MQTT Sunucu Bilgileri</h3>
+                <div class="bg-gray-50 border border-border rounded-md p-4 grid grid-cols-2 gap-4">
+                    <div><span class="block text-[10px] text-ink-muted uppercase">Broker Adresi</span><span class="font-mono text-[12px] text-ink font-medium">ciftlik.rifatseker.com.tr</span></div>
+                    <div><span class="block text-[10px] text-ink-muted uppercase">Port</span><span class="font-mono text-[12px] text-ink font-medium">1883</span></div>
+                    <div><span class="block text-[10px] text-ink-muted uppercase">Protokol</span><span class="font-mono text-[12px] text-ink font-medium">mqtt://</span></div>
+                    <div><span class="block text-[10px] text-ink-muted uppercase">Kimlik Doğrulama</span><span class="font-mono text-[12px] text-ink font-medium">Yok (Anonim erişim açık)</span></div>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-[12px] font-semibold text-ink uppercase tracking-wider mb-2">2. Topic Yapısı</h3>
+                <p class="text-[11px] text-ink-light mb-3">Tüm sensör verileri aşağıdaki ana başlık (topic) formatında gönderilmelidir. <code class="bg-gray-100 text-brand-DEFAULT px-1 rounded">{zone_id}</code> kısmı sensörün bulunduğu bölge numarasıdır (1'den başlar).</p>
+                <div class="bg-gray-50 border border-border rounded-md p-4">
+                    <p class="text-[10px] text-ink-muted mb-1 uppercase">Sensör Verisi Gönderim Topic'i:</p>
+                    <code class="font-mono text-[13px] font-medium text-ink bg-white border border-gray-200 px-2 py-1 rounded block mb-4">ciftlik/zone-{zone_id}/sensors</code>
+                    
+                    <p class="text-[10px] text-ink-muted mb-1 uppercase">Fan Durumu Gönderim Topic'i (SCADA):</p>
+                    <code class="font-mono text-[13px] font-medium text-ink bg-white border border-gray-200 px-2 py-1 rounded block mb-4">ciftlik/scada/fan/{fan_id}</code>
+
+                    <p class="text-[10px] text-ink-muted mb-1 uppercase">Isıtıcı Durumu Gönderim Topic'i (SCADA):</p>
+                    <code class="font-mono text-[13px] font-medium text-ink bg-white border border-gray-200 px-2 py-1 rounded block mb-4">ciftlik/scada/heater/{heater_id}</code>
+
+                    <p class="text-[10px] text-ink-muted mb-1 uppercase">Petek (Pad) Durumu Gönderim Topic'i (SCADA):</p>
+                    <code class="font-mono text-[13px] font-medium text-ink bg-white border border-gray-200 px-2 py-1 rounded block">ciftlik/scada/pad/{pad_id}</code>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-[12px] font-semibold text-ink uppercase tracking-wider mb-2">3. Payload (JSON Formatı)</h3>
+                <p class="text-[11px] text-ink-light mb-3">Sensörler verilerini standart JSON formatında göndermelidir. Sayısal değerler float veya integer olabilir.</p>
+                <div class="bg-gray-800 rounded-md p-4 overflow-x-auto text-gray-300 font-mono text-[11px]">
+<pre>{
+  "temp": 24.5,     // Sıcaklık (°C)
+  "rh": 60.2,       // Bağıl Nem (%)
+  "nh3": 4.2,       // Amonyak (ppm)
+  "co2": 580.0      // Karbondioksit (ppm)
+}</pre>
+                </div>
+                <p class="text-[11px] text-ink-light mt-4 mb-3">SCADA cihazları (Fan, Isıtıcı, Petek) durum verilerini standart JSON formatında `status` boolean olarak göndermelidir.</p>
+                <div class="bg-gray-800 rounded-md p-4 overflow-x-auto text-gray-300 font-mono text-[11px]">
+<pre>{
+  "status": true    // true = Açık (ON), false = Kapalı (OFF)
+}</pre>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-[12px] font-semibold text-ink uppercase tracking-wider mb-2">4. Örnek Kod (Python)</h3>
+                <div class="bg-gray-800 rounded-md p-4 overflow-x-auto text-gray-300 font-mono text-[11px]">
+<pre>import paho.mqtt.client as mqtt
+import json
+
+client = mqtt.Client()
+client.connect("ciftlik.rifatseker.com.tr", 1883, 60)
+
+# Sensör Verisi Gönderme Örneği
+payload = {"temp": 25.0, "rh": 60, "nh3": 5, "co2": 600}
+client.publish("ciftlik/zone-1/sensors", json.dumps(payload))
+
+# Fan Durumu Gönderme Örneği
+fan_payload = {"status": True}
+client.publish("ciftlik/scada/fan/1", json.dumps(fan_payload))
+
+client.disconnect()</pre>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ALARM HISTORY MODAL -->
+<div id="alarm-history-modal" class="fixed inset-0 z-50 hidden modal-overlay flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-modal w-full max-w-2xl max-h-[80vh] flex flex-col">
+        <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+            <div>
+                <h2 class="text-sm font-semibold text-ink">Geçmiş Alarmlar</h2>
+            </div>
+            <button onclick="closeAlarmHistory()" class="text-ink-muted hover:text-ink transition-colors">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 4L4 12M4 4L12 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+        </div>
+        <div class="p-6 flex-1 overflow-y-auto custom-scroll bg-base" id="alarm-history-list">
+            <div class="text-[12px] text-ink-light">Yükleniyor...</div>
+        </div>
+    </div>
+</div>
+
+<!-- WATCHDOG MODAL -->
+<div id="watchdog-modal" class="fixed inset-0 z-[60] hidden flex flex-col items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
+    <div class="bg-white rounded-lg shadow-modal p-6 max-w-sm w-full border border-gray-200">
+        <h2 class="text-sm font-semibold text-red-600 mb-2">Sistem Bağlantısı Koptu</h2>
+        <p class="text-[12px] text-ink-muted mb-4">API veya Sensör Modülünden veri alınamıyor. Otomatik yeniden bağlanılıyor.</p>
+        <div class="flex items-center gap-2 text-[11px] font-medium text-ink-light">
+            <span class="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+            Bekleniyor...
+        </div>
+    </div>
+</div>
+
+<!-- MORTALITY MODAL -->
+<div id="mortality-modal" class="fixed inset-0 z-50 hidden modal-overlay flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-modal w-full max-w-sm">
+        <div class="flex justify-between items-center px-5 py-3 border-b border-gray-100">
+            <h2 class="text-sm font-semibold text-ink">Fire Bildirimi</h2>
+            <button onclick="closeMortalityModal()" class="text-ink-muted hover:text-ink">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 4L4 12M4 4L12 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+        </div>
+        <div class="p-5">
+            <label class="block text-[11px] font-medium text-ink-muted mb-1">Ölü Sayısı</label>
+            <input type="number" id="mortality_input" class="settings-input mb-2" value="0" min="0">
+            <p class="text-[10px] text-ink-light">Sürüden düşülecek miktar.</p>
+        </div>
+        <div class="px-5 py-3 border-t border-gray-100 bg-gray-50 flex justify-end gap-2 rounded-b-lg">
+            <button onclick="closeMortalityModal()" class="btn-secondary">İptal</button>
+            <button onclick="saveMortality()" class="btn-primary !bg-red-600 hover:!bg-red-700">Kaydet</button>
+        </div>
+    </div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="max-w-[1280px] mx-auto px-4 md:px-6 py-6 space-y-6">
+
+    <!-- HEADER / OPERATIONS CENTER -->
+    <header class="flex flex-col md:flex-row justify-between items-end md:items-center pb-4 border-b border-border">
+        <div>
+            <div class="flex items-center gap-2 mb-1">
+                <div class="w-2 h-2 bg-brand-DEFAULT rounded-full"></div>
+                <h1 class="text-base font-semibold tracking-tight text-ink">ARIOT DSS</h1>
+                <span class="text-gray-300 mx-1">/</span>
+                <span id="ui-phase-badge" class="text-sm font-bold text-white bg-emerald-600 px-3 py-1 rounded-full shadow-sm">--</span>
+            </div>
+            <div class="flex items-center gap-3 text-[11px] text-ink-muted">
+                <span id="ui-target-temp" class="tabular-data">Hedef: --°C</span>
+                <span class="w-1 h-1 rounded-full bg-gray-300"></span>
+                <span class="tabular-data">Ağırlık: <span id="ui-current-weight" class="font-medium text-ink">--</span> kg</span>
+                <span class="w-1 h-1 rounded-full bg-gray-300"></span>
+                <span class="tabular-data text-red-600">Fire: <span id="ui-dead-birds" class="font-medium">0</span></span>
+            </div>
+        </div>
+        <div class="flex items-center gap-4 text-[12px] font-medium text-ink-muted mt-4 md:mt-0">
+            <div class="flex flex-col items-end mr-2">
+                <div class="flex items-center gap-1.5 text-emerald-600">
+                    <span id="status-indicator" class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                    <span class="tracking-wide text-[10px] uppercase">Online</span>
+                </div>
+                <span id="top-last-update" class="text-[10px] text-ink-light tabular-data">--:--:--</span>
+            </div>
+            
+            <label class="flex items-center gap-1.5 cursor-pointer hover:text-ink transition-colors mr-1">
+                <span>Demo Modu</span>
+                <input type="checkbox" id="ui-demo-toggle" class="sr-only peer" onchange="toggleDemoMode(this)">
+                <div class="w-7 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[12px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500 relative"></div>
+            </label>
+
+            <button onclick="openSetup()" class="hover:text-ink transition-colors">Kurulum</button>
+            <button onclick="openSettings()" class="hover:text-ink transition-colors">Ayarlar</button>
+            <button onclick="openIotSetup()" class="hover:text-ink transition-colors">IoT Setup</button>
+            <button onclick="openMortalityModal()" class="hover:text-red-600 transition-colors">Fire</button>
+        </div>
+    </header>
+
+    <!-- LIFECYCLE BAR -->
+    <div class="pt-2">
+        <div class="flex justify-between text-[9px] font-semibold text-ink-muted uppercase tracking-widest mb-1.5">
+            <span>Brooding (0-10)</span>
+            <span>Growing (11-30)</span>
+            <span>Finishing (31-45)</span>
+        </div>
+        <div class="relative w-full h-1 bg-gray-200 rounded-full">
+            <div id="ui-lifecycle-progress" class="absolute top-0 left-0 h-full bg-emerald-500 transition-all duration-700 ease-out shadow-[0_0_8px_rgba(16,185,129,0.5)]" style="width: 0%;"></div>
+            <div id="ui-lifecycle-marker" class="absolute top-1/2 -translate-y-1/2 w-2 h-2 bg-white border border-brand-DEFAULT rounded-full transition-all duration-700 ease-out" style="left: 0%;"></div>
+        </div>
+    </div>
+
+    <!-- METRICS GRID -->
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <!-- Main Loss Metric -->
+        <div class="panel col-span-2 flex flex-col justify-between border-t-2 border-t-red-500 relative overflow-hidden">
+            <p class="text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2 relative z-10">Total Risk (24h)</p>
+            <p id="val-total-loss" class="text-3xl font-mono font-medium text-ink tabular-data tick-animate relative z-10">₺0</p>
+            <div class="flex gap-4 mt-4 pt-4 border-t border-gray-100 relative z-10">
+                <div>
+                    <p class="text-[9px] text-ink-light uppercase mb-0.5">Yem/Stres</p>
+                    <p id="val-feed-loss" class="text-[12px] font-mono text-ink tabular-data tick-animate">₺0</p>
+                </div>
+                <div>
+                    <p class="text-[9px] text-ink-light uppercase mb-0.5">Enerji</p>
+                    <p id="val-energy-cost" class="text-[12px] font-mono text-ink tabular-data tick-animate">₺0</p>
+                </div>
+                <div>
+                    <p class="text-[9px] text-ink-light uppercase mb-0.5">Fire</p>
+                    <p id="val-mortality-loss" class="text-[12px] font-mono text-red-600 tabular-data tick-animate">₺0</p>
+                </div>
+            </div>
+            <!-- Sparkline hidden in minimal mode but keep div to not break JS if it expects it -->
+            <div id="chart-loss-sparkline" class="absolute bottom-0 right-0 w-full opacity-10 mix-blend-multiply pointer-events-none"></div>
+        </div>
+        
+        <!-- Standard Metrics -->
+        <div class="panel flex flex-col justify-between">
+            <p class="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">EPEF Skoru</p>
+            <p id="val-epef" class="text-2xl font-mono font-medium text-ink tabular-data tick-animate">--</p>
+        </div>
+        <div class="panel flex flex-col justify-between">
+            <p class="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">FCR Ceza</p>
+            <p id="val-fcr-penalty" class="text-2xl font-mono font-medium text-ink tabular-data tick-animate">--</p>
+        </div>
+        <div class="panel flex flex-col justify-between">
+            <p class="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Rüzgar Etkisi</p>
+            <p id="val-wind-chill" class="text-2xl font-mono font-medium text-ink tabular-data tick-animate">--°C</p>
+        </div>
+        <div class="panel flex flex-col justify-between border-t-2 border-t-emerald-500">
+            <p class="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Dış Sıcaklık</p>
+            <p id="om-temp" class="text-2xl font-mono font-medium text-ink tabular-data tick-animate">--°C</p>
+            <div class="flex justify-between mt-2 pt-2 border-t border-gray-100">
+                <p class="text-[9px] text-ink-light">Rüzgar: <span id="om-wind" class="tabular-data text-ink-muted">--</span></p>
+                <p class="text-[9px] text-ink-light" id="om-location">--</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCADA / ACTUATORS -->
+    <div class="grid grid-cols-3 gap-4">
+        <div class="panel flex flex-col justify-between border-t-2 border-t-blue-500">
+            <p class="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Fan Durumu</p>
+            <p id="ui-fan-status" class="text-2xl font-mono font-medium text-ink tabular-data tick-animate">1/10</p>
+        </div>
+        <div class="panel flex flex-col justify-between border-t-2 border-t-orange-500">
+            <p class="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Isıtıcı</p>
+            <p id="ui-heater-status" class="text-2xl font-mono font-medium text-ink tabular-data tick-animate">OFF</p>
+        </div>
+        <div class="panel flex flex-col justify-between border-t-2 border-t-cyan-500">
+            <p class="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Petek</p>
+            <p id="ui-pad-status" class="text-2xl font-mono font-medium text-ink tabular-data tick-animate">OFF</p>
+        </div>
+    </div>
+
+    <!-- AI ACTIONS -->
+    <div>
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="text-[12px] font-semibold text-ink uppercase tracking-wider">Decision Support System</h3>
+            <button onclick="openAlarmHistory()" class="text-[11px] text-ink-muted hover:text-ink transition-colors">History</button>
+        </div>
+        <div id="action-list" class="flex gap-3 overflow-x-auto custom-scroll pb-2 w-full snap-x">
+            <div class="text-[12px] text-ink-light">Processing telemetry...</div>
+        </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="panel">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Sıcaklık & Nem Geçmişi</h3>
+                <div class="flex items-center gap-3 text-[10px]">
+                    <span id="last-update" class="text-ink-light tabular-data">--</span>
+                    <select id="history-range" onchange="fetchHistory()" class="bg-transparent text-ink font-medium outline-none cursor-pointer">
+                        <option value="1h">1H</option>
+                        <option value="24h" selected>24H</option>
+                        <option value="7d">7D</option>
+                        <option value="30d">30D</option>
+                        <option value="all">ALL</option>
+                    </select>
+                </div>
+            </div>
+            <div id="chart-temp-rh" class="w-full" style="min-height: 280px;"></div>
+        </div>
+        <div class="panel">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Zehirli Gaz Konsantrasyonu</h3>
+            </div>
+            <div id="chart-gas" class="w-full" style="min-height: 280px;"></div>
+        </div>
+    </div>
+
+    <!-- SENSORS ROW -->
+    <div class="w-full">
+        <!-- Zone Sensors -->
+        <div class="panel">
+            <div class="flex items-center gap-4 mb-4 border-b border-border pb-3">
+                <h3 class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider w-1/4">Tesis Ortalaması</h3>
+                <div class="flex gap-6 w-3/4">
+                    <p class="text-[11px] text-ink-light"><span class="block mb-0.5">Sıcaklık</span> <span id="val-temp" class="text-base font-mono font-medium text-ink tabular-data tick-animate">--</span></p>
+                    <p class="text-[11px] text-ink-light"><span class="block mb-0.5">Nem</span> <span id="val-rh" class="text-base font-mono font-medium text-ink tabular-data tick-animate">--</span></p>
+                    <p class="text-[11px] text-ink-light"><span class="block mb-0.5">Amonyak</span> <span id="val-nh3" class="text-base font-mono font-medium text-ink tabular-data tick-animate">--</span></p>
+                    <p class="text-[11px] text-ink-light"><span class="block mb-0.5">CO2</span> <span id="val-co2" class="text-base font-mono font-medium text-ink tabular-data tick-animate">--</span></p>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-[10px] font-semibold text-ink-light uppercase tracking-wider mb-3">Zone Telemetri</h3>
+                <div id="zone-sensors-list" class="flex gap-3 overflow-x-auto custom-scroll pb-2 w-full snap-x">
+                    <div class="text-[11px] text-ink-light">Awaiting sensor data...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart Configurations Overrides to match new design -->
+<script>
+    window.Apex = {
+        chart: {
+            fontFamily: 'JetBrains Mono, monospace',
+            toolbar: { show: false },
+            animations: { enabled: true, easing: 'easeout', speed: 400 },
+            background: 'transparent'
+        },
+        grid: {
+            borderColor: '#F1F5F9',
+            strokeDashArray: 3,
+            padding: { top: 0, right: 0, bottom: 0, left: 10 }
+        },
+        dataLabels: { enabled: false },
+        tooltip: {
+            theme: 'light',
+            style: { fontSize: '11px', fontFamily: 'Inter' }
+        },
+        stroke: { curve: 'smooth', width: 2 }
+    };
+</script>
+
+<script src="/static/js/main.js?v=4"></script>
+</body>
+</html>

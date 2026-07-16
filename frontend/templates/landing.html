@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARIOT | Decision Support System</title>
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="ARIOT - Akıllı Kümes Yönetim Sistemi">
+    <meta property="og:description" content="Havlandırma hataları ve biyogüvenlik stres kaynaklı kayıpları sıfırlayın. Endüstriyel Karar Destek Platformu.">
+    <meta property="og:image" content="https://ciftlik.rifatseker.com.tr/static/og_cover.png">
+    <meta property="og:url" content="https://ciftlik.rifatseker.com.tr/">
+    <meta property="og:type" content="website">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        base: '#FAFAFA',
+                        panel: '#FFFFFF',
+                        border: '#E2E8F0',
+                        ink: {
+                            DEFAULT: '#0F172A',
+                            muted: '#64748B',
+                            light: '#94A3B8'
+                        },
+                        brand: {
+                            DEFAULT: '#1E293B',
+                            accent: '#2D3B2E'
+                        }
+                    },
+                    boxShadow: {
+                        'premium': '0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { 
+            background-color: #FAFAFA;
+            color: #0F172A;
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .tabular-data {
+            font-family: 'JetBrains Mono', monospace;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+        }
+        
+        .panel { 
+            background-color: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 6px;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02);
+            padding: 24px;
+        }
+
+        .settings-input { 
+            width: 100%; 
+            padding: 8px 12px; 
+            border: 1px solid #E2E8F0; 
+            border-radius: 4px; 
+            font-size: 13px; 
+            outline: none; 
+            transition: all 0.15s ease;
+            background: #FFFFFF;
+            color: #0F172A;
+        }
+        .settings-input:focus { 
+            border-color: #1E293B; 
+            box-shadow: 0 0 0 1px #1E293B; 
+        }
+        
+        .btn-primary { 
+            background-color: #1E293B; 
+            color: white; 
+            padding: 8px 18px; 
+            border-radius: 4px; 
+            font-weight: 500; 
+            font-size: 13px; 
+            transition: background 0.15s ease; 
+        }
+        .btn-primary:hover { background: #000000; }
+
+        .btn-secondary { 
+            background: white; 
+            color: #0F172A; 
+            padding: 8px 18px; 
+            border: 1px solid #E2E8F0;
+            border-radius: 4px; 
+            font-weight: 500; 
+            font-size: 13px; 
+            transition: all 0.15s ease; 
+        }
+        .btn-secondary:hover { background: #FAFAFA; border-color: #CBD5E1; }
+
+        .section-label { 
+            font-size: 11px; 
+            font-weight: 600; 
+            letter-spacing: 0.04em; 
+            text-transform: uppercase; 
+            color: #64748B; 
+            margin-bottom: 12px; 
+            padding-bottom: 8px; 
+            border-bottom: 1px solid #E2E8F0; 
+        }
+    </style>
+</head>
+<body class="selection:bg-gray-200 selection:text-black">
+
+    <!-- NAVIGATION -->
+    <nav class="border-b border-border bg-panel sticky top-0 z-50">
+        <div class="max-w-[1280px] mx-auto px-4 md:px-6 h-14 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="w-2 h-2 bg-brand-DEFAULT rounded-full"></div>
+                <span class="text-sm font-semibold tracking-tight text-ink">ARIOT DSS</span>
+            </div>
+            <div class="flex items-center gap-6 text-[12px] font-medium text-ink-muted">
+                <a href="#ozellikler" class="hover:text-ink transition-colors">Nasıl Çalışır?</a>
+                <a href="#fiyat" class="hover:text-ink transition-colors">Fiyat Hesapla</a>
+                <a href="/manual" class="hover:text-ink transition-colors">Kılavuz</a>
+                <a href="/demo" class="btn-primary text-[11px] !py-1.5">Canlı Demo</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <header class="py-20 md:py-32 border-b border-border bg-panel">
+        <div class="max-w-[1280px] mx-auto px-4 md:px-6">
+            <div class="max-w-3xl">
+                <h1 class="text-3xl md:text-5xl font-semibold tracking-tight leading-tight text-ink mb-6">
+                    Endüstriyel Üretimde Biyolojik ve Operasyonel Karar Destek Sistemi
+                </h1>
+                <p class="text-base text-ink-muted mb-8 leading-relaxed max-w-2xl">
+                    Havalandırma arızaları, sıcaklık stresi ve yüksek amonyak birikimi sebebiyle her gün binlerce liralık yem israfına son verin. ARIOT DSS, telemetri verilerini gerçek zamanlı analiz ederek finansal riskleri sıfırlar.
+                </p>
+                <div class="flex flex-wrap gap-3">
+                    <a href="/demo" class="btn-primary flex items-center gap-2">
+                        Canlı Demoyu Aç
+                    </a>
+                    <a href="#fiyat" class="btn-secondary">Maliyet Hesapla</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- SHOWCASE -->
+    <section class="py-12 bg-base border-b border-border">
+        <div class="max-w-[1280px] mx-auto px-4 md:px-6">
+            <div class="flex flex-col md:flex-row gap-8 justify-center">
+                <div class="w-full md:w-1/2">
+                    <div class="rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.06)] border border-border p-2 bg-white transform transition hover:-translate-y-1 hover:shadow-[0_8px_32px_rgba(0,0,0,0.1)] cursor-pointer" onclick="openLightbox('/static/asset1.png')">
+                        <img src="/static/asset1.png" alt="Sistem Görünümü 1" class="w-full h-auto rounded">
+                    </div>
+                </div>
+                <div class="w-full md:w-1/2">
+                    <div class="rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.06)] border border-border p-2 bg-white transform transition hover:-translate-y-1 hover:shadow-[0_8px_32px_rgba(0,0,0,0.1)] cursor-pointer" onclick="openLightbox('/static/asset2.png')">
+                        <img src="/static/asset2.png" alt="Sistem Görünümü 2" class="w-full h-auto rounded">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section id="ozellikler" class="py-20 border-b border-border bg-base">
+        <div class="max-w-[1280px] mx-auto px-4 md:px-6">
+            <div class="mb-12">
+                <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider mb-2">OPERATIONAL CONTROL</p>
+                <h2 class="text-2xl font-semibold tracking-tight text-ink">Neden ARIOT DSS?</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Feature 1 -->
+                <div class="panel">
+                    <h3 class="text-sm font-semibold text-ink mb-2">Gizli Tehlikelerin Tespiti</h3>
+                    <p class="text-xs text-ink-muted leading-relaxed">
+                        Geleneksel alarm sistemleri sadece basit sınır değerlerini okur. ARIOT DSS ise kümes içindeki mikroklima dengesizliklerini ve sensör arızalarını anında tespit ederek otonom güvenlik duvarı oluşturur.
+                    </p>
+                </div>
+                <!-- Feature 2 -->
+                <div class="panel">
+                    <h3 class="text-sm font-semibold text-ink mb-2">Model Öngörülü Kontrol (MPC)</h3>
+                    <p class="text-xs text-ink-muted leading-relaxed">
+                        Gelecekteki fiziksel durumları (ısı ve hava akımı dengeleri) simüle eden otonom motor, aktüatörleri (fan, petek, ısıtıcı) en az elektrik ve yem kaybı oluşturacak kombinasyonda otonom yönetir.
+                    </p>
+                </div>
+                <!-- Feature 3 -->
+                <div class="panel">
+                    <h3 class="text-sm font-semibold text-ink mb-2">Finansal Risk Takibi</h3>
+                    <p class="text-xs text-ink-muted leading-relaxed">
+                        Stres koşullarından ötürü hayvanların yediği yemlerin boşa gitmesinin (FCR kaybı) anlık maliyetini hesaplayıp size sunar. Tüm analizleri kurumsal kararlar alabilmeniz için TL bazlı finansal metriklere dönüştürür.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CALCULATOR -->
+    <section id="fiyat" class="py-20 bg-panel border-b border-border">
+        <div class="max-w-[1280px] mx-auto px-4 md:px-6">
+            <div class="max-w-4xl">
+                <div class="mb-12">
+                    <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider mb-2">HARDWARE PLANNING</p>
+                    <h2 class="text-2xl font-semibold tracking-tight text-ink">Maliyet Hesaplama Modülü</h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Inputs -->
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-xs font-semibold text-ink-muted mb-2">Kümes Uzunluğu (m)</label>
+                            <input type="number" id="calc-length" value="100" class="settings-input" oninput="calculateQuote()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-ink-muted mb-2">Kümes Genişliği (m)</label>
+                            <input type="number" id="calc-width" value="14" class="settings-input" oninput="calculateQuote()">
+                        </div>
+                        <div class="p-4 bg-base border border-border rounded text-[11px] text-ink-muted leading-relaxed">
+                            Sensör miktarı, her 20 metrede bir termal ölçüm ve geniş kümeslerde (18m+) paralel sensör hatları akademik standartlarına uygun olarak otonom hesaplanır.
+                        </div>
+                    </div>
+
+                    <!-- Receipt -->
+                    <div class="panel flex flex-col justify-between">
+                        <div>
+                            <h4 class="text-xs font-semibold text-ink uppercase tracking-wider mb-4 pb-2 border-b border-border">Planlanan Ekipman Listesi</h4>
+                            <div class="space-y-3 text-[12px]">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-ink-muted"><span id="qty-temp" class="font-semibold text-ink">5</span>x Sıcaklık & Nem</span>
+                                    <span class="font-mono text-ink tabular-data font-medium">$<span id="price-temp">500</span></span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-ink-muted"><span id="qty-nh3" class="font-semibold text-ink">2</span>x Amonyak Sensörü</span>
+                                    <span class="font-mono text-ink tabular-data font-medium">$<span id="price-nh3">1026</span></span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-ink-muted">Ana Gateway</span>
+                                    <span class="font-mono text-ink tabular-data font-medium">$<span id="price-gw">510</span></span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-ink-muted">Yazılım & Kurulum Hizmetleri</span>
+                                    <span class="text-[11px] font-semibold text-emerald-600">Proje Bazlı Değerlendirilir</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t border-border">
+                            <div class="flex justify-between items-end mb-4">
+                                <span class="text-sm font-semibold text-ink">Toplam Tahmini Sensör Maliyeti</span>
+                                <span class="text-2xl font-mono font-bold text-ink tabular-data">$<span id="price-total">2036</span></span>
+                            </div>
+                            <a href="https://wa.me/905332758880?text=Merhaba, ARIOT Akıllı Kümes Sistemi fiyat hesaplaması hakkında görüşmek istiyorum." target="_blank" class="w-full bg-[#1E293B] hover:bg-black text-white text-[12px] font-medium py-2.5 rounded flex items-center justify-center gap-2 transition-colors">
+                                Detaylı Teklif Al
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="bg-panel border-t border-border py-12 text-[11px] text-ink-muted">
+        <div class="max-w-[1280px] mx-auto px-4 md:px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="flex items-center gap-2">
+                <div class="w-1.5 h-1.5 bg-brand-DEFAULT rounded-full"></div>
+                <span class="font-semibold text-ink">ARIOT DSS</span>
+            </div>
+            <div class="flex gap-6">
+                <a href="/manual" class="hover:text-ink transition-colors">Kullanım Kılavuzu</a>
+                <a href="/demo" class="hover:text-ink transition-colors">Canlı Demo</a>
+                <a href="https://wa.me/905332758880" target="_blank" class="hover:text-ink transition-colors">İletişim</a>
+            </div>
+            <p class="opacity-60">© 2026 ARIOT Akıllı Çiftlik Sistemleri. Tüm hakları saklıdır.</p>
+        </div>
+    </footer>
+
+    <!-- LIGHTBOX MODAL -->
+    <div id="lightbox" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/80 backdrop-blur-sm cursor-pointer transition-opacity duration-300 opacity-0" onclick="closeLightbox()">
+        <img id="lightbox-img" src="" alt="Büyük Görünüm" class="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl transform scale-95 transition-transform duration-300">
+    </div>
+
+    <script>
+        function calculateQuote() {
+            const length = parseFloat(document.getElementById('calc-length').value) || 0;
+            const width = parseFloat(document.getElementById('calc-width').value) || 0;
+            
+            if (length <= 0 || width <= 0) return;
+
+            const sensorsPerRow = Math.max(2, Math.round(length / 20));
+            const rows = width > 18 ? 2 : 1;
+            const qtyTemp = sensorsPerRow * rows;
+            
+            const nh3PerRow = Math.max(1, Math.round(length / 40));
+            const qtyNh3 = nh3PerRow * rows;
+
+            const qtyGw = 1;
+
+            const unitPriceTemp = 100;
+            const unitPriceNh3 = 513;
+            const unitPriceGw = 510;
+
+            const totalTemp = qtyTemp * unitPriceTemp;
+            const totalNh3 = qtyNh3 * unitPriceNh3;
+            const totalGw = qtyGw * unitPriceGw;
+            
+            const grandTotal = totalTemp + totalNh3 + totalGw;
+
+            const qtyTempEl = document.getElementById('qty-temp');
+            const qtyNh3El = document.getElementById('qty-nh3');
+            const qtyGwEl = document.getElementById('qty-gw');
+            const priceTempEl = document.getElementById('price-temp');
+            const priceNh3El = document.getElementById('price-nh3');
+            const priceGwEl = document.getElementById('price-gw');
+            const priceTotalEl = document.getElementById('price-total');
+
+            if(qtyTempEl) qtyTempEl.innerText = qtyTemp;
+            if(qtyNh3El) qtyNh3El.innerText = qtyNh3;
+            if(qtyGwEl) qtyGwEl.innerText = qtyGw;
+
+            if(priceTempEl) priceTempEl.innerText = totalTemp;
+            if(priceNh3El) priceNh3El.innerText = totalNh3;
+            if(priceGwEl) priceGwEl.innerText = totalGw;
+            
+            if(priceTotalEl) priceTotalEl.innerText = grandTotal;
+        }
+
+        function openLightbox(src) {
+            const lightbox = document.getElementById('lightbox');
+            const img = document.getElementById('lightbox-img');
+            img.src = src;
+            lightbox.classList.remove('hidden');
+            lightbox.classList.add('flex');
+            
+            // Trigger reflow for animation
+            void lightbox.offsetWidth;
+            
+            lightbox.classList.remove('opacity-0');
+            lightbox.classList.add('opacity-100');
+            img.classList.remove('scale-95');
+            img.classList.add('scale-100');
+        }
+
+        function closeLightbox() {
+            const lightbox = document.getElementById('lightbox');
+            const img = document.getElementById('lightbox-img');
+            
+            lightbox.classList.remove('opacity-100');
+            lightbox.classList.add('opacity-0');
+            img.classList.remove('scale-100');
+            img.classList.add('scale-95');
+            
+            setTimeout(() => {
+                lightbox.classList.add('hidden');
+                lightbox.classList.remove('flex');
+            }, 300);
+        }
+        
+        calculateQuote();
+    </script>
+</body>
+</html>

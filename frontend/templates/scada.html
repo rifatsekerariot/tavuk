@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARIOT | SCADA Terminal</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        base: '#0B0F17', // Pitch dark industrial base
+                        panel: '#111827', // Gray-900
+                        border: '#1F2937', // Gray-800
+                        borderMuted: '#374151',
+                        ink: {
+                            DEFAULT: '#F9FAFB',
+                            muted: '#9CA3AF',
+                            light: '#4B5563'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { 
+            background-color: #0B0F17;
+            color: #F9FAFB;
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .tabular-data {
+            font-family: 'JetBrains Mono', monospace;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+        }
+
+        .dark-panel {
+            background-color: #111827;
+            border: 1px solid #1F2937;
+            border-radius: 6px;
+            padding: 24px;
+        }
+
+        .settings-select {
+            background-color: #0B0F17;
+            border: 1px solid #374151;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            color: #F9FAFB;
+            outline: none;
+            transition: border-color 0.15s ease;
+        }
+        .settings-select:focus {
+            border-color: #10B981;
+        }
+
+        .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #4B5563; }
+    </style>
+</head>
+<body class="selection:bg-emerald-900 selection:text-white flex flex-col min-h-screen">
+
+    <!-- HEADER -->
+    <header class="border-b border-border bg-panel py-4 px-6 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+            <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+            <h1 class="text-sm font-semibold tracking-wider uppercase text-ink">ARIOT SCADA TERMINAL</h1>
+            <span class="text-ink-light text-[10px] font-mono bg-base px-2 py-0.5 rounded border border-border">HMI ENGINE</span>
+        </div>
+        <div class="flex items-center gap-4 text-xs font-mono text-ink-muted">
+            <div class="flex items-center gap-2">
+                <span class="text-ink-light">STATUS:</span>
+                <span id="connection-status" class="text-emerald-400">CONNECTING...</span>
+            </div>
+            <span class="text-border">|</span>
+            <span id="terminal-clock" class="tabular-data">00:00:00</span>
+        </div>
+    </header>
+
+    <!-- CONTENT -->
+    <main class="flex-1 max-w-[1000px] w-full mx-auto p-4 md:p-6 space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <!-- CONTROLS & OVERRIDES -->
+            <div class="dark-panel md:col-span-1 flex flex-col justify-between space-y-6">
+                <div>
+                    <div class="flex justify-between items-center mb-6 pb-3 border-b border-border">
+                        <h2 class="text-xs font-semibold tracking-wider text-ink-muted uppercase">Sistem Modu</h2>
+                        <div class="flex items-center gap-2">
+                            <span id="ai-status-text" class="text-[10px] font-mono text-emerald-400">AUTO</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="ai-toggle-switch" onchange="toggleAiOperator(this.checked)" class="sr-only peer" checked>
+                                <div class="w-7 h-4 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Overrides Form -->
+                    <div id="manual-control-panel" class="space-y-5 opacity-40 pointer-events-none transition-opacity duration-200">
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-[11px] font-medium text-ink-muted">Fan Hızı Override</label>
+                                <span class="text-xs font-mono font-bold text-emerald-400 tabular-data"><span id="manual-fan-val">0</span> Fan</span>
+                            </div>
+                            <input type="range" id="manual-fan-slider" min="0" max="10" value="0" oninput="changeManualFan(this.value)" class="w-full h-1 bg-gray-800 rounded appearance-none cursor-pointer accent-emerald-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-medium text-ink-muted mb-2">Isıtıcı Güç Seviyesi</label>
+                            <select id="manual-heater-select" onchange="changeManualHeater(this.value)" class="settings-select w-full">
+                                <option value="0.0">OFF (KAPALI)</option>
+                                <option value="250000.0">MID (250 kW)</option>
+                                <option value="500000.0">MAX (500 kW)</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-2">
+                            <label class="text-[11px] font-medium text-ink-muted">Soğutma Pedi Override</label>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="manual-pad-check" onchange="changeManualPad(this.checked)" class="sr-only peer">
+                                <div class="w-6 h-3.5 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-2.5 after:w-2.5 after:transition-all peer-checked:bg-blue-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actuator Feedback Stats -->
+                <div class="pt-6 border-t border-border grid grid-cols-3 gap-2 text-center font-mono text-[10px]">
+                    <div class="bg-base/30 border border-border p-2 rounded">
+                        <p class="text-ink-light mb-0.5">FAN DURUMU</p>
+                        <p id="vo-fan-text" class="text-ink text-xs font-semibold">0/0</p>
+                    </div>
+                    <div class="bg-base/30 border border-border p-2 rounded">
+                        <p class="text-ink-light mb-0.5">ISITICI</p>
+                        <p id="vo-heater-status" class="text-ink text-xs font-semibold">OFF</p>
+                    </div>
+                    <div class="bg-base/30 border border-border p-2 rounded">
+                        <p class="text-ink-light mb-0.5">PETEK</p>
+                        <p id="vo-pad-status" class="text-ink text-xs font-semibold">OFF</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LOGS & REAL-TIME TELEMETRY -->
+            <div class="md:col-span-2 flex flex-col gap-6">
+                <!-- Action Log -->
+                <div class="dark-panel flex-1 flex flex-col justify-between">
+                    <h2 class="text-xs font-semibold tracking-wider text-ink-muted uppercase mb-3">SCADA Karar Geçmişi (Logs)</h2>
+                    <div class="bg-base rounded border border-border p-4 flex-1 h-[220px] overflow-y-auto custom-scroll font-mono text-xs leading-relaxed space-y-1.5" id="vo-action-history">
+                        <p class="text-ink-light">> SYSTEM STARTED</p>
+                    </div>
+                </div>
+
+                <!-- Telemetry Panel -->
+                <div class="dark-panel grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    <div class="bg-base border border-border p-3 rounded">
+                        <p class="text-[10px] text-ink-muted font-mono uppercase mb-1">Ort. Sıcaklık</p>
+                        <p id="val-temp" class="text-lg font-mono font-medium text-ink tabular-data">--</p>
+                    </div>
+                    <div class="bg-base border border-border p-3 rounded">
+                        <p class="text-[10px] text-ink-muted font-mono uppercase mb-1">Ort. Nem</p>
+                        <p id="val-rh" class="text-lg font-mono font-medium text-ink tabular-data">--</p>
+                    </div>
+                    <div class="bg-base border border-border p-3 rounded">
+                        <p class="text-[10px] text-ink-muted font-mono uppercase mb-1">Ort. Amonyak</p>
+                        <p id="val-nh3" class="text-lg font-mono font-medium text-ink tabular-data">--</p>
+                    </div>
+                    <div class="bg-base border border-border p-3 rounded">
+                        <p class="text-[10px] text-ink-muted font-mono uppercase mb-1">Ort. CO2</p>
+                        <p id="val-co2" class="text-lg font-mono font-medium text-ink tabular-data">--</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-border bg-panel py-4 px-6 text-[10px] font-mono text-ink-light flex justify-between items-center">
+        <span>© 2026 ARIOT DSS SCADA SYSTEM</span>
+        <span>ENGINE TYPE: MPC</span>
+    </footer>
+
+    <script>
+        // Update Terminal Clock
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('terminal-clock').innerText = now.toLocaleTimeString('tr-TR');
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        let totalFansCount = 6; // Default
+
+        // Fetch Settings & Live Data
+        function initSCADA() {
+            // Get initial settings to find total fans count
+            fetch('/api/settings')
+                .then(r => r.json())
+                .then(settings => {
+                    totalFansCount = settings.fan_count || 6;
+                    
+                    // Set inputs to match database values initially
+                    const aiSwitch = document.getElementById('ai-toggle-switch');
+                    if (aiSwitch) {
+                        aiSwitch.checked = settings.ai_operator_enabled;
+                        toggleAiOperatorLayout(settings.ai_operator_enabled);
+                    }
+                    
+                    const fanSlider = document.getElementById('manual-fan-slider');
+                    if (fanSlider) {
+                        fanSlider.max = totalFansCount;
+                        fanSlider.value = settings.manual_active_fans || 0;
+                        document.getElementById('manual-fan-val').innerText = settings.manual_active_fans || 0;
+                    }
+
+                    const heaterSelect = document.getElementById('manual-heater-select');
+                    if (heaterSelect) {
+                        heaterSelect.value = (settings.manual_heater_w || 0.0).toFixed(1);
+                    }
+
+                    const padCheck = document.getElementById('manual-pad-check');
+                    if (padCheck) {
+                        padCheck.checked = settings.manual_pad_cooling || false;
+                    }
+                });
+
+            // Start polling live data
+            fetchLive();
+            setInterval(fetchLive, 2000); // 2 seconds high frequency for SCADA
+        }
+
+        function fetchLive() {
+            fetch('/api/dashboard/live')
+                .then(r => r.json())
+                .then(data => {
+                    const statusIndicator = document.getElementById('connection-status');
+                    if (data.module_down) {
+                        statusIndicator.innerText = "OFFLINE";
+                        statusIndicator.className = "text-red-500";
+                        return;
+                    }
+
+                    statusIndicator.innerText = "ONLINE";
+                    statusIndicator.className = "text-emerald-400";
+
+                    // Telemetry update
+                    if (data.raw) {
+                        document.getElementById('val-temp').innerText = (data.raw.t_in || 0).toFixed(1) + '°C';
+                        document.getElementById('val-rh').innerText = (data.raw.rh_in || 0).toFixed(1) + '%';
+                        document.getElementById('val-nh3').innerText = (data.raw.nh3 || 0).toFixed(1) + ' ppm';
+                        document.getElementById('val-co2').innerText = (data.raw.co2 || 0).toFixed(0) + ' ppm';
+                    }
+
+                    // Actuators feedback update
+                    if (data.actuators) {
+                        const activeFans = data.actuators.active_fans || 0;
+                        document.getElementById('vo-fan-text').innerText = `${activeFans}/${totalFansCount}`;
+                        
+                        const heaterW = data.actuators.heater_w || 0.0;
+                        const heaterEl = document.getElementById('vo-heater-status');
+                        if (heaterW > 0) {
+                            heaterEl.innerText = `${(heaterW / 1000).toFixed(0)} kW`;
+                            heaterEl.className = "text-orange-400 font-bold text-xs animate-pulse";
+                        } else {
+                            heaterEl.innerText = "OFF";
+                            heaterEl.className = "text-ink text-xs font-semibold";
+                        }
+
+                        const padActive = data.actuators.pad_cooling || false;
+                        const padEl = document.getElementById('vo-pad-status');
+                        if (padActive) {
+                            padEl.innerText = "ACTIVE";
+                            padEl.className = "text-blue-400 font-bold text-xs animate-pulse";
+                        } else {
+                            padEl.innerText = "OFF";
+                            padEl.className = "text-ink text-xs font-semibold";
+                        }
+
+                        // Update Log
+                        const logEl = document.getElementById('vo-action-history');
+                        if (logEl) {
+                            if (data.actuators.action_history && data.actuators.action_history.length > 0) {
+                                logEl.innerHTML = '';
+                                data.actuators.action_history.forEach((action, index) => {
+                                    const timeStr = new Date(action.timestamp * 1000).toLocaleTimeString();
+                                    const isLatest = index === 0;
+                                    const colorClass = isLatest ? 'text-emerald-400 font-bold' : 'text-ink-muted opacity-80';
+                                    const dot = isLatest ? '▶' : '·';
+                                    logEl.innerHTML += `<p class="mb-1">${dot} [${timeStr}] ${action.text}</p>`;
+                                });
+                            } else if (data.actuators.action_text) {
+                                logEl.innerHTML = `<p class="text-emerald-400">${data.actuators.action_text}</p>`;
+                            }
+                        }
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('connection-status').innerText = "ERROR";
+                    document.getElementById('connection-status').className = "text-red-500";
+                    console.error("SCADA Polling Error:", err);
+                });
+        }
+
+        // Toggle layouts
+        function toggleAiOperatorLayout(enabled) {
+            const statusText = document.getElementById('ai-status-text');
+            const panel = document.getElementById('manual-control-panel');
+            
+            if (enabled) {
+                statusText.innerText = "AUTO";
+                statusText.className = "text-[10px] font-mono text-emerald-400";
+                panel.classList.add('opacity-40', 'pointer-events-none');
+            } else {
+                statusText.innerText = "MANUAL";
+                statusText.className = "text-[10px] font-mono text-red-400";
+                panel.classList.remove('opacity-40', 'pointer-events-none');
+            }
+        }
+
+        function toggleAiOperator(enabled) {
+            toggleAiOperatorLayout(enabled);
+            updateManualControl('ai_operator_enabled', enabled);
+        }
+
+        function changeManualFan(val) {
+            document.getElementById('manual-fan-val').innerText = val;
+            updateManualControl('manual_active_fans', parseInt(val));
+        }
+
+        function changeManualHeater(val) {
+            updateManualControl('manual_heater_w', parseFloat(val));
+        }
+
+        function changeManualPad(checked) {
+            updateManualControl('manual_pad_cooling', checked);
+        }
+
+        function updateManualControl(field, value) {
+            const payload = {};
+            payload[field] = value;
+            
+            fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(r => r.json())
+            .then(() => {
+                fetchLive();
+            });
+        }
+
+        window.onload = initSCADA;
+    </script>
+</body>
+</html>

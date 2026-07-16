@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Akıllı Kümes Sağlık Takibi</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        .upload-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px dashed #3498db;
+            border-radius: 8px;
+            background: #ecf0f1;
+        }
+        .video-container {
+            margin-top: 20px;
+        }
+        img {
+            max-width: 100%;
+            border: 2px solid #2c3e50;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐔 Akıllı Kümes Sağlık Takibi (YOLOv8)</h1>
+        
+        <div class="upload-section">
+            <form action="/upload" method="post" enctype="multipart/form-data">
+                <label for="video"><b>Test Videosu Yükle:</b></label><br><br>
+                <input type="file" name="video" id="video" accept="video/mp4, video/avi, video/mkv" required>
+                <button type="submit">Videoyu Yükle ve Analiz Et</button>
+            </form>
+        </div>
+
+        {% if video_uploaded %}
+        <div class="video-container">
+            <h2>Canlı Analiz Sonuçları</h2>
+            <img src="{{ url_for('video_feed') }}" alt="İşlenmiş Video Akışı">
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

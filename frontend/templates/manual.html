@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARIOT | Kullanım Kılavuzu</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        base: '#FAFAFA',
+                        panel: '#FFFFFF',
+                        border: '#E2E8F0',
+                        ink: {
+                            DEFAULT: '#0F172A',
+                            muted: '#64748B',
+                            light: '#94A3B8'
+                        },
+                        brand: {
+                            DEFAULT: '#1E293B',
+                            accent: '#2D3B2E'
+                        }
+                    },
+                    boxShadow: {
+                        'premium': '0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { 
+            background-color: #FAFAFA;
+            color: #0F172A;
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .panel { 
+            background-color: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 6px;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02);
+            padding: 24px;
+        }
+        
+        .prose-custom p {
+            color: #64748B;
+            font-size: 13px;
+            line-height: 1.625;
+        }
+        
+        .prose-custom ul {
+            list-style-type: disc;
+            padding-left: 20px;
+            color: #64748B;
+            font-size: 13px;
+            line-height: 1.625;
+        }
+        
+        .prose-custom strong {
+            font-weight: 600;
+            color: #0F172A;
+        }
+        
+        .btn-primary { 
+            background-color: #1E293B;
+            color: #FFFFFF;
+            padding: 6px 16px;
+            border-radius: 4px;
+            font-weight: 500;
+            font-size: 11px;
+            transition: background-color 0.15s ease;
+        }
+        .btn-primary:hover {
+            background-color: #000000;
+        }
+    </style>
+</head>
+<body class="selection:bg-gray-200 selection:text-black">
+
+    <!-- NAVIGATION -->
+    <nav class="border-b border-border bg-panel sticky top-0 z-50">
+        <div class="max-w-[1280px] mx-auto px-4 md:px-6 h-14 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="w-2 h-2 bg-brand-DEFAULT rounded-full"></div>
+                <a href="/" class="text-sm font-semibold tracking-tight text-ink">ARIOT DSS</a>
+                <span class="text-ink-muted text-[11px] bg-base px-2 py-0.5 rounded border border-border">Kılavuz</span>
+            </div>
+            <div class="flex items-center gap-6 text-[12px] font-medium text-ink-muted">
+                <a href="/" class="hover:text-ink transition-colors">Ana Sayfa</a>
+                <a href="/demo" class="btn-primary text-[11px] !py-1.5">Canlı Demo</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HEADER -->
+    <header class="py-12 border-b border-border bg-panel">
+        <div class="max-w-[800px] mx-auto px-4">
+            <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider mb-2">DOCUMENTATION</p>
+            <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-ink mb-2">
+                Sistem Kullanım Kılavuzu
+            </h1>
+            <p class="text-[13px] text-ink-muted leading-relaxed">
+                Bu kılavuz, ARIOT DSS (Karar Destek Platformu) arayüzündeki bileşenlerin teknik tanımlarını ve otonom SCADA kontrol sisteminin yönetimini açıklar.
+            </p>
+        </div>
+    </header>
+
+    <!-- CONTENT WITH PREMIUM PANEL LAYOUT -->
+    <main class="py-12 bg-base">
+        <div class="max-w-[800px] mx-auto px-4 space-y-6 prose-custom">
+            
+            <!-- Giriş Panel -->
+            <div class="panel">
+                <h2 class="text-sm font-semibold text-ink uppercase tracking-wider mb-4 pb-2 border-b border-border">Giriş</h2>
+                <p>
+                    Sisteme giriş yaptığınızda, karşınıza gelen kontrol paneli standart bir izleme aracı değil, gerçek zamanlı bir <strong>Endüstriyel Kontrol Odası (SCADA)</strong> arabirimidir. Bu arabirim, kritik kararları saniyeler içinde almanızı sağlayacak şekilde organize edilmiştir.
+                </p>
+            </div>
+
+            <!-- 1. Yaşam Döngüsü -->
+            <div class="panel">
+                <h2 class="text-sm font-semibold text-ink uppercase tracking-wider mb-4 pb-2 border-b border-border">1. Yaşam Döngüsü Çizelgesi (Lifecycle Tracker)</h2>
+                <p class="mb-4">
+                    Ekranın en üst kısmında yer alan yatay zaman çizelgesi, sürünün kesim döngüsündeki fiziksel fazlarını temsil eder:
+                </p>
+                <ul class="mb-4">
+                    <li><strong>Brooding (0-10 Gün):</strong> Civciv dönemi, ideal sıcaklık gereksinimi yüksektir.</li>
+                    <li><strong>Growing (11-30 Gün):</strong> Büyüme dönemi, havalandırma ihtiyacı artar.</li>
+                    <li><strong>Finishing (31-45 Gün):</strong> Bitirme dönemi, gaz tahliyesi ve sıcaklık kontrolü kritiktir.</li>
+                </ul>
+                <p>
+                    Çizelgedeki ilerleme çubuğu, sürü yaşına göre değişen ideal hedef ağırlık ve hedef sıcaklık değerlerini otomatik olarak kalibre eder.
+                </p>
+            </div>
+
+            <!-- 2. Kümülatif Finansal Risk -->
+            <div class="panel">
+                <h2 class="text-sm font-semibold text-ink uppercase tracking-wider mb-4 pb-2 border-b border-border">2. Kümülatif Finansal Risk Paneli (KPI)</h2>
+                <p class="mb-4">
+                    Arayüzün ana odak noktası olan finansal analiz kartı, tesis genelindeki riskleri parasal değerlere dönüştürür:
+                </p>
+                <ul>
+                    <li><strong>Total Risk (24h):</strong> Sıcaklık stresi veya hava kalitesi bozukluğu nedeniyle oluşan yem israfı, enerji sarfiyatı ve telef (fire) kayıplarının anlık TL değeridir.</li>
+                    <li><strong>Yem/Stres:</strong> Hayvanların strese girmesi sonucu yediği yemleri ete dönüştürememesinden (FCR kaybı) kaynaklanan israf.</li>
+                    <li><strong>Enerji:</strong> Aktif çalışan fan, petek pompaları ve ısıtıcıların tahmini elektrik/yakıt tüketim maliyeti.</li>
+                </ul>
+            </div>
+
+            <!-- 3. Biyolojik Performans -->
+            <div class="panel">
+                <h2 class="text-sm font-semibold text-ink uppercase tracking-wider mb-4 pb-2 border-b border-border">3. Biyolojik Performans Metrikleri</h2>
+                <p class="mb-4">
+                    Risk panelinin sağında yer alan kritik durum göstergeleridir:
+                </p>
+                <ul>
+                    <li><strong>EPEF Skoru:</strong> Avrupa Üretim Verimlilik Faktörü. Sürünün sağlık ve karlılık endeksidir (300 üzeri başarılı kabul edilir).</li>
+                    <li><strong>FCR Ceza Değeri:</strong> Sıcaklık veya amonyak stresi nedeniyle yem dönüşüm oranına eklenen sapma payı.</li>
+                    <li><strong>Rüzgar Etkisi:</strong> Çalışan tünel fanlarının yarattığı hava akımının tavuklar üzerindeki hissi serinletme derecesidir.</li>
+                </ul>
+            </div>
+
+            <!-- 4. Yapay Zeka Karar Motoru -->
+            <div class="panel">
+                <h2 class="text-sm font-semibold text-ink uppercase tracking-wider mb-4 pb-2 border-b border-border">4. Yapay Zeka Karar Motoru (Prescriptions)</h2>
+                <p>
+                    Geleneksel kurallı sistemlerin aksine, ARIOT DSS karar motoru bir parametrenin (örn. sıcaklık) değişmesi durumunda oluşacak zincirleme etkileri öngörür. Hatalı veya sapmalı veri gönderen arızalı bir sensör tespit edildiğinde, veri kirliliğini önlemek adına o cihazı geçici olarak devre dışı bırakır ve ekrana bildirim düşer.
+                </p>
+            </div>
+
+            <!-- 5. Grafikler -->
+            <div class="panel">
+                <h2 class="text-sm font-semibold text-ink uppercase tracking-wider mb-4 pb-2 border-b border-border">5. Zaman Serisi Grafikleri</h2>
+                <p class="mb-4">
+                    Ekranın merkezindeki grafikler, tesisten gelen 24 saatlik verilerin trend analizini sunar:
+                </p>
+                <ul>
+                    <li><strong>Sıcaklık & Nem Geçmişi:</strong> İdeal sıcaklık bandı ve hissedilen sıcaklık eğrisini gösterir.</li>
+                    <li><strong>Zehirli Gaz Konsantrasyonu:</strong> Amonyak (NH3) ve Karbondioksit (CO2) PPM seviyelerini anlık izler.</li>
+                </ul>
+            </div>
+
+            <!-- 6. SCADA -->
+            <div class="panel">
+                <h2 class="text-sm font-semibold text-ink uppercase tracking-wider mb-4 pb-2 border-b border-border">6. Terminal SCADA & Canlı Kontrol Paneli</h2>
+                <p class="mb-4">
+                    Koyu temayla ayrıştırılmış olan `/scada` sayfasındaki panel, otonom kontrol ve manuel müdahale alanıdır:
+                </p>
+                <ul>
+                    <li><strong>AUTO Modu (MPC):</strong> Aktif olduğunda, karar motoru fanları, ısıtıcıyı ve soğutma peteğini en düşük maliyetle ideal ortamı sağlayacak şekilde otonom yönetir.</li>
+                    <li><strong>Manual Override:</strong> Otomatik mod kapatıldığında fan kademeleri, ısıtıcı kademesi ve pad pompası kullanıcı tarafından elle kontrol edilebilir hale gelir.</li>
+                </ul>
+            </div>
+
+            <!-- 7. Güvenlik Protokolü -->
+            <div class="panel">
+                <h2 class="text-sm font-semibold text-ink uppercase tracking-wider mb-4 pb-2 border-b border-border">7. Fikri Mülkiyet ve Veri Güvenliği Protokolü</h2>
+                <p class="mb-4">
+                    ARIOT DSS, endüstriyel karar algoritmaları ve patentli fiziksel modelleme kütüphaneleri barındıran tescilli bir ticari yazılımdır.
+                </p>
+                <ul>
+                    <li><strong>Uçtan Uca Şifreleme (Edge Encryption):</strong> Kümes içindeki sensör telemetri verileri ve MQTT sunucusu arasındaki tüm trafik AES-256 standartlarında şifrelenir. Lisanssız dış veri sızıntıları donanımsal olarak engellenmiştir.</li>
+                    <li><strong>Fikir ve Kaynak Kod Koruması:</strong> Sistemde kullanılan Model Öngörülü Kontrol (MPC) algoritmaları, FCR optimizasyon katsayıları ve mikroklima analiz metotları telif ve patent hakları ile korunmaktadır. Kaynak kodlarının, arayüz tasarım şablonlarının kopyalanması, tersine mühendislik (reverse engineering) ile taklit edilmesi 5846 sayılı Fikir ve Sanat Eserleri Kanunu kapsamında cezai yaptırımlara tabidir.</li>
+                    <li><strong>Giriş ve Erişim Kontrolü:</strong> API uç noktaları (endpoints) CORS kuralları ve şifreli token entegrasyonu ile sınırlandırılmıştır. Olağan dışı sorgu talepleri Watchdog sistemi tarafından engellenerek loglanır.</li>
+                </ul>
+            </div>
+            
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-panel border-t border-border py-12 text-[11px] text-ink-muted">
+        <div class="max-w-[1280px] mx-auto px-4 md:px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="flex items-center gap-2">
+                <div class="w-1.5 h-1.5 bg-brand-DEFAULT rounded-full"></div>
+                <span class="font-semibold text-ink">ARIOT DSS</span>
+            </div>
+            <div class="flex gap-6">
+                <a href="/" class="hover:text-ink transition-colors">Ana Sayfa</a>
+                <a href="/demo" class="hover:text-ink transition-colors">Canlı Demo</a>
+                <a href="https://wa.me/905332758880" target="_blank" class="hover:text-ink transition-colors">İletişim</a>
+            </div>
+            <p class="opacity-60">© 2026 ARIOT Akıllı Çiftlik Sistemleri. Tüm hakları saklıdır.</p>
+        </div>
+    </footer>
+
+    <!-- Custom Protection Toast Notification Container -->
+    <div id="protection-toast" class="fixed bottom-5 right-5 bg-red-600 text-white px-4 py-2.5 rounded shadow-lg text-[12px] font-medium hidden z-50 transition-opacity duration-300">
+        ARIOT DSS: Fikri mülkiyet ve veri koruma protokolü nedeniyle bu işlem engellenmiştir.
+    </div>
+
+    <!-- Security & Copy Protection Scripts -->
+    <script>
+        // Disable right click (context menu)
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            showProtectionToast();
+        });
+
+        // Disable copy and cut
+        document.addEventListener('copy', function(e) {
+            e.preventDefault();
+            showProtectionToast();
+        });
+        document.addEventListener('cut', function(e) {
+            e.preventDefault();
+            showProtectionToast();
+        });
+
+        // Disable specific shortcuts (Ctrl+C, Ctrl+U, Ctrl+S, F12)
+        document.addEventListener('keydown', function(e) {
+            if (
+                e.keyCode === 123 || // F12
+                (e.ctrlKey && e.shiftKey && e.keyCode === 73) || // Ctrl+Shift+I
+                (e.ctrlKey && e.keyCode === 85) || // Ctrl+U
+                (e.ctrlKey && e.keyCode === 83) || // Ctrl+S
+                (e.ctrlKey && e.keyCode === 67)    // Ctrl+C
+            ) {
+                e.preventDefault();
+                showProtectionToast();
+                return false;
+            }
+        });
+
+        function showProtectionToast() {
+            const toast = document.getElementById('protection-toast');
+            if (toast) {
+                toast.classList.remove('hidden');
+                toast.style.opacity = '1';
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    setTimeout(() => {
+                        toast.classList.add('hidden');
+                    }, 300);
+                }, 3000);
+            }
+        }
+    </script>
+</body>
+</html>

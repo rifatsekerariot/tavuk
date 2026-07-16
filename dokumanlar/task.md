@@ -1,0 +1,6 @@
+- `[x]` 1. `database/models.py` içerisine AlarmHistory tablosu eklenecek.
+- `[x]` 2. `api/main.py` içerisindeki `/api/dashboard/live` endpoint'i üretilen alarmları (spam yapmadan) DB'ye kaydedecek.
+- `[x]` 3. `api/main.py` içerisine `/api/dashboard/alarms` endpoint'i eklenecek.
+- `[x]` 4. `frontend/templates/index.html` arayüzüne Alarm Geçmişi butonu ve Modalı eklenecek.
+- `[x]` 5. `frontend/static/js/main.js` javascript dosyası güncellenip API'den veriler çekilecek.
+- `[/]` 6. Docker derlemesi yapılacak ve uzak sunucuya deploy edilecek.

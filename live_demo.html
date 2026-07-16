@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARIOT | Kurumsal Çiftlik Kontrol Merkezi</title>
+    <meta name="description" content="ARIOT IoT tabanlı gerçek zamanlı kümes izleme ve biyolojik analiz sistemi.">
+    <!-- Tailwind & ApexCharts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <!-- Leaflet JS for Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: #F7F3EA; /* Saman/Krem Zemin */
+            color: #1e293b; 
+        }
+        
+        /* Tabular figures for data elements */
+        .tabular-data {
+            font-family: 'JetBrains Mono', monospace;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+        }
+        
+        /* Solid Industrial Panel Styling */
+        .panel { 
+            background: #ffffff;
+            border: 1px solid #d1d5db; 
+            border-radius: 0.5rem; 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05); 
+            padding: 1.5rem; 
+        }
+        
+        /* Status cards in top banner */
+        .status-card { 
+            background: #ffffff;
+            border: 1px solid #d1d5db; 
+            border-left: 4px solid #2D3B2E; /* Toprak Yeşili */
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            padding: 1.25rem;
+        }
+        
+        /* Tick Animation for Numbers */
+        @keyframes tick-up {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-4px); color: #f59e0b; }
+            100% { transform: translateY(0); }
+        }
+        .tick-animate.ticking {
+            animation: tick-up 0.3s ease-out;
+        }
+
+        /* Modals */
+        .modal-overlay { background: rgba(15, 23, 42, 0.6); backdrop-filter: none; }
+        .settings-input { 
+            width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #cbd5e1; 
+            border-radius: 0.375rem; font-size: 0.875rem; outline: none; transition: all 0.2s; 
+        }
+        .settings-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+        .save-btn { 
+            background: #0f172a; color: white; padding: 0.625rem 1.5rem; 
+            border-radius: 0.375rem; font-weight: 600; font-size: 0.875rem; border: none; 
+            cursor: pointer; transition: background 0.2s; 
+        }
+        .save-btn:hover { background: #1e293b; }
+        
+        /* Typography */
+        .section-label { 
+            font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; 
+            text-transform: uppercase; color: #64748b; margin-bottom: 0.75rem; 
+            padding-bottom: 0.5rem; border-bottom: 1px solid #f1f5f9; 
+        }
+        
+        /* Map Container */
+        #map { height: 250px; width: 100%; border-radius: 0.5rem; border: 1px solid #e2e8f0; z-index: 10; }
+
+        .pulse-dot { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SETTINGS MODAL -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="settings-modal" class="fixed inset-0 z-50 hidden modal-overlay flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-xl z-20">
+            <div>
+                <h2 class="text-lg font-bold text-gray-900">Sistem Konfigürasyonu</h2>
+                <p class="text-xs text-gray-500 mt-0.5">Fiziksel modelleme ve maliyet parametreleri</p>
+            </div>
+            <button onclick="closeSettings()" class="text-gray-400 hover:text-gray-700 text-2xl leading-none">&times;</button>
+        </div>
+
+        <form id="settings-form" onsubmit="saveSettings(event)" class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                
+                <!-- Sol Kolon -->
+                <div class="space-y-6">
+                    <div>
+                        <p class="section-label">📐 Kümes Fiziksel Parametreleri</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="text-xs font-semibold text-gray-700 block mb-1">Uzunluk (m)</label><input type="number" step="0.1" id="s-house_length" class="settings-input"></div>
+                            <div><label class="text-xs font-semibold text-gray-700 block mb-1">Genişlik (m)</label><input type="number" step="0.1" id="s-house_width" class="settings-input"></div>
+                            <div><label class="text-xs font-semibold text-gray-700 block mb-1">Tepe Yükseklik (m)</label><input type="number" step="0.1" id="s-ridge_h" class="settings-input"></div>
+                            <div><label class="text-xs font-semibold text-gray-700 block mb-1">Saçak Yükseklik (m)</label><input type="number" step="0.1" id="s-eaves_h" class="settings-input"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="section-label">🐔 Sürü Metrikleri</p>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div><label class="text-xs font-semibold text-gray-700 block mb-1">Mevcut (adet)</label><input type="number" id="s-bird_count" class="settings-input"></div>
+                            <div><label class="text-xs font-semibold text-gray-700 block mb-1">Canlı Ağırlık (kg)</label><input type="number" step="0.001" id="s-bird_weight" class="settings-input"></div>
+                            <div><label class="text-xs font-semibold text-gray-700 block mb-1">Sürü Başlangıcı</label><input type="datetime-local" id="s-flock_start_date" class="settings-input"></div>
+                            <div>
+                                <label class="text-xs font-semibold text-gray-700 block mb-1">Tavuk Irkı</label>
+                                <select id="s-flock_breed" class="settings-input">
+                                    <optgroup label="Etlik (Broiler)">
+                                        <option value="Ross 308 (Etlik)">Ross 308</option>
+                                        <option value="Cobb 500 (Etlik)">Cobb 500</option>
+                                    </optgroup>
+                                    <optgroup label="Yumurtacı (Layer)">
+                                        <option value="Lohmann Brown (Yumurtacı)">Lohmann Brown</option>
+                                        <option value="Atak-S (Yumurtacı)">Atak-S</option>
+                                        <option value="LSL Beyaz (Yumurtacı)">LSL Beyaz</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="section-label">💨 Havalandırma Sistemi</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="text-xs font-semibold text-gray-700 block mb-1">Fan Sayısı (adet)</label><input type="number" id="s-fan_count" class="settings-input"></div>
+                            <div><label class="text-xs font-semibold text-gray-700 block mb-1">Fan Kapasitesi (m³/h)</label><input type="number" id="s-fan_capacity" class="settings-input"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="section-label">💰 Ticari Girdiler</p>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div><label class="text-xs font-semibold text-gray-700 block mb-1">Yem (₺/kg)</label><input type="number" step="0.01" id="s-feed_price" class="settings-input"></div>
+                            <div><label class="text-xs font-semibold text-gray-700 block mb-1">Et (₺/kg)</label><input type="number" step="0.01" id="s-meat_price" class="settings-input"></div>
+                            <div><label class="text-xs font-semibold text-gray-700 block mb-1">Elektrik (₺/kWh)</label><input type="number" step="0.01" id="s-electricity_price" class="settings-input"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sağ Kolon -->
+                <div class="space-y-6">
+                    <div>
+                        <p class="section-label">📍 Lokasyon ve Dış Ortam</p>
+                        <p class="text-xs text-gray-500 mb-2">Harita üzerinden tesisinizin konumunu seçiniz. Dış hava koşulları bu konuma göre çekilecektir.</p>
+                        <div id="map" class="mb-3"></div>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div><label class="text-xs font-semibold text-gray-700 block mb-1">Tesis Adı</label><input type="text" id="s-location_name" class="settings-input"></div>
+                            <div><label class="text-xs font-semibold text-gray-700 block mb-1">Enlem (Lat)</label><input type="number" step="0.0001" id="s-lat" class="settings-input" readonly></div>
+                            <div><label class="text-xs font-semibold text-gray-700 block mb-1">Boylam (Lon)</label><input type="number" step="0.0001" id="s-lon" class="settings-input" readonly></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="section-label">📡 Veri Kaynağı (IoT)</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="text-xs font-semibold text-gray-700 block mb-1">MQTT Topic</label><input type="text" id="s-mqtt_topic" class="settings-input" placeholder="farm/sensors"></div>
+                            <div><label class="text-xs font-semibold text-gray-700 block mb-1">Sensör (Zone) Sayısı</label><input type="number" id="s-sensor_count" class="settings-input" value="6"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            
+            <div class="flex justify-between pt-4 mt-6 border-t border-gray-200">
+                <button type="button" onclick="resetMockData()" class="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    Geçmiş Verileri Sıfırla
+                </button>
+                <div class="flex items-center">
+                    <div id="save-status" class="text-sm text-green-600 font-semibold mr-4 hidden">✅ Konfigürasyon Güncellendi</div>
+                    <button type="submit" class="save-btn">Değişiklikleri Uygula</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SETUP MODAL (Installation Wizard) -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="setup-modal" class="fixed inset-0 z-50 hidden modal-overlay flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto flex flex-col">
+        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-xl z-20">
+            <div>
+                <h2 class="text-lg font-bold text-indigo-900">Akıllı Kurulum Asistanı</h2>
+                <p class="text-xs text-gray-500 mt-0.5">Akademik normlara göre otomatik sensör yerleşimi (Mikroklima Analizi)</p>
+            </div>
+            <button onclick="closeSetup()" class="text-gray-400 hover:text-gray-700 text-2xl leading-none">&times;</button>
+        </div>
+
+        <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-8 flex-1">
+            <!-- Sol Kolon: Girdiler -->
+            <div class="md:col-span-1 space-y-6">
+                <div class="panel bg-indigo-50/50 border-indigo-100">
+                    <p class="section-label text-indigo-800 border-indigo-200" style="color:#3730a3;">📐 Kümes Ebatları</p>
+                    <div class="space-y-4">
+                        <div><label class="text-xs font-semibold text-gray-700 block mb-1">Uzunluk (m)</label><input type="number" id="setup-length" class="settings-input" oninput="calculateOptimalLayout()"></div>
+                        <div><label class="text-xs font-semibold text-gray-700 block mb-1">Genişlik (m)</label><input type="number" id="setup-width" class="settings-input" oninput="calculateOptimalLayout()"></div>
+                        <div><label class="text-xs font-semibold text-gray-700 block mb-1">Sürü Başlangıç Tarihi</label><input type="date" id="setup-start-date" class="settings-input" oninput="calculateOptimalLayout()"></div>
+                        <div>
+                            <label class="text-xs font-semibold text-gray-700 block mb-1">Tavuk Irkı</label>
+                            <select id="setup-breed" class="settings-input" oninput="calculateOptimalLayout()">
+                                <optgroup label="Etlik (Broiler)">
+                                    <option value="Ross 308 (Etlik)">Ross 308</option>
+                                    <option value="Cobb 500 (Etlik)">Cobb 500</option>
+                                </optgroup>
+                                <optgroup label="Yumurtacı (Layer)">
+                                    <option value="Lohmann Brown (Yumurtacı)">Lohmann Brown</option>
+                                    <option value="Atak-S (Yumurtacı)">Atak-S</option>
+                                    <option value="LSL Beyaz (Yumurtacı)">LSL Beyaz</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-6">
+                        <div class="bg-indigo-100 text-indigo-800 p-3 rounded-md border border-indigo-200 text-center shadow-inner">
+                            <p class="text-xs font-bold mb-1 uppercase tracking-wider">İhtiyaç Duyulan Sensör</p>
+                            <p class="text-4xl font-black" id="setup-sensor-count">--</p>
+                            <p class="text-[10px] mt-1 opacity-80">Cihaz Sayısı</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="setup-save-status" class="text-sm text-green-600 font-semibold mb-2 hidden text-center">✅ Ayarlar Başarıyla Senkronize Edildi!</div>
+                <button onclick="saveSetup()" class="w-full save-btn bg-indigo-600 hover:bg-indigo-700 shadow-md flex justify-center items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    Bu Planı Sistemi Kaydet
+                </button>
+                <button onclick="downloadSetupPDF()" class="w-full save-btn mt-3 bg-slate-800 hover:bg-slate-900 shadow-md flex justify-center items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    PDF Şemasını İndir
+                </button>
+            </div>
+
+            <!-- Sağ Kolon: Kroki -->
+            <div class="md:col-span-2 flex flex-col" id="setup-export-area">
+                <p class="section-label">🗺️ 3D İzometrik Yerleşim Krokisi</p>
+                <div class="flex-1 bg-slate-50 rounded-xl border border-slate-300 relative flex items-center justify-center p-8 min-h-[400px] overflow-visible perspective-[1000px]" id="setup-canvas-container">
+                    <!-- JS will draw here -->
+                </div>
+                <div id="setup-height-info" class="mt-4 p-3 bg-indigo-50 border border-indigo-200 rounded-lg flex items-start gap-3">
+                    <span class="text-indigo-600 font-bold">Z-Ekseni:</span>
+                    <p class="text-sm text-indigo-900" id="setup-height-desc">...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- MAIN DASHBOARD -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="max-w-[1400px] mx-auto px-4 py-8 space-y-6">
+
+    <!-- MORTALITY MODAL -->
+    <div id="mortality-modal" class="fixed inset-0 z-50 hidden modal-overlay flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-xl z-20">
+                <div>
+                    <h2 class="text-lg font-bold text-red-700 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        Günlük Fire Bildirimi
+                    </h2>
+                    <p class="text-xs text-gray-500 mt-1">Sürüden eksilen hayvan sayısını girin.</p>
+                </div>
+                <button onclick="closeMortalityModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Ölü Sayısı (Adet)</label>
+                    <input type="number" id="mortality_input" class="settings-input" value="0" min="0">
+                    <p class="text-xs text-gray-500 mt-2">Girdiğiniz sayı mevcut sürüden düşülecek ve kümülatif zarara eklenecektir.</p>
+                </div>
+            </div>
+
+            <div class="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 rounded-b-xl flex justify-end gap-3 z-20">
+                <button onclick="closeMortalityModal()" class="px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-semibold transition-colors">İptal</button>
+                <button onclick="saveMortality()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-semibold transition-colors shadow-sm">Kaydet</button>
+            </div>
+        </div>
+    </div>
+<div class="max-w-7xl mx-auto space-y-6 px-4 md:px-8 py-6">
+
+    <!-- Navbar -->
+    <header class="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-t-xl border border-gray-200 border-b-0 shadow-sm gap-4">
+        <div class="flex items-center gap-4 w-full md:w-auto">
+            <div class="w-10 h-10 bg-[#2D3B2E] rounded-lg flex items-center justify-center">
+                <span class="text-white text-lg font-bold">A</span>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-xl font-bold text-slate-900 leading-tight">ARIOT DSS</h1>
+                    <span id="ui-phase-badge" class="px-2 py-0.5 bg-slate-100 text-slate-800 border border-slate-200 rounded text-[10px] font-bold">--. Gün</span>
+                </div>
+                <p class="text-[11px] text-slate-500 flex flex-wrap items-center gap-1.5 mt-0.5">
+                    <span>Endüstriyel Karar Destek Sistemi</span>
+                    <span class="text-gray-300 hidden md:inline">|</span>
+                    <span id="ui-target-temp" class="font-medium text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-gray-200">Hedef: --°C</span>
+                    <span class="text-gray-300 hidden md:inline">|</span>
+                    <span class="font-medium text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-gray-200">Ağırlık: <span id="ui-current-weight" class="tabular-data">--</span> kg</span>
+                </p>
+            </div>
+        </div>
+        <div class="flex flex-wrap items-center justify-center md:justify-end gap-3 md:gap-4 w-full md:w-auto text-sm font-semibold text-slate-600">
+            <span id="status-indicator" class="inline-flex items-center text-xs md:text-sm font-bold text-green-700 justify-center">
+                <span class="w-2 h-2 bg-green-500 rounded-full mr-1.5 animate-pulse"></span>
+                Çevrimiçi
+            </span>
+            <span class="text-gray-300">|</span>
+            <button onclick="openSetup()" class="hover:text-[#2D3B2E] transition-colors">Kurulum</button>
+            <span class="text-gray-300">|</span>
+            <button onclick="openSettings()" class="hover:text-[#2D3B2E] transition-colors">Ayarlar</button>
+            <span class="text-gray-300">|</span>
+            <a href="/" class="hover:text-[#2D3B2E] transition-colors">Ana Sayfa</a>
+            
+            <button onclick="openMortalityModal()" class="ml-2 px-4 py-2 bg-[#b91c1c] hover:bg-[#991b1b] text-white rounded text-xs md:text-sm font-bold transition-colors shadow-sm flex items-center justify-center">
+                Fire Bildir
+            </button>
+        </div>
+    </header>
+
+    <!-- İmza Öğe: Tam Genişlik Yaşam Döngüsü Çizelgesi -->
+    <div class="bg-white border border-gray-200 rounded-b-xl shadow-sm p-4 mb-6">
+        <div class="relative w-full h-2 bg-gray-100 rounded-full overflow-hidden mb-2">
+            <div id="ui-lifecycle-progress" class="absolute top-0 left-0 h-full bg-[#2D3B2E] transition-all duration-1000" style="width: 0%;"></div>
+            <div id="ui-lifecycle-marker" class="absolute top-0 h-3 w-3 -mt-0.5 bg-white border-2 border-[#2D3B2E] rounded-full shadow-md z-10 transition-all duration-1000" style="left: 0%; transform: translateX(-50%);"></div>
+        </div>
+        <div class="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider relative">
+            <span style="width: 22%; text-align: left;">Brooding (0-10)</span>
+            <span style="width: 44%; text-align: center;">Growing (11-30)</span>
+            <span style="width: 33%; text-align: right;">Finishing (31-45)</span>
+            <!-- Markers for phase boundaries -->
+            <div class="absolute top-[-14px] left-[22.2%] w-px h-3 bg-gray-300"></div>
+            <div class="absolute top-[-14px] left-[66.6%] w-px h-3 bg-gray-300"></div>
+        </div>
+    </div>
+
+    <!-- Zaman Serisi Grafikleri (Metriklerden Önce, Ana Odak) -->
+    <div class="space-y-6 mb-6">
+        <div class="panel w-full">
+            <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-2">
+                <h3 class="text-sm font-bold text-slate-800">İç Ortam Sıcaklık ve Nem Geçmişi</h3>
+                <div class="flex items-center gap-2">
+                    <select id="history-range" onchange="fetchHistory()" class="text-xs border border-gray-200 rounded px-2 py-1 bg-gray-50 outline-none text-slate-600 font-semibold cursor-pointer">
+                        <option value="1h">Son 1 Saat</option>
+                        <option value="24h" selected>Son 24 Saat</option>
+                        <option value="7d">Son 1 Hafta</option>
+                        <option value="30d">Son 1 Ay</option>
+                        <option value="all">Tüm Zamanlar</option>
+                    </select>
+                    <span id="last-update" class="text-[10px] text-gray-400 hidden md:block">Son güncelleme: --</span>
+                </div>
+            </div>
+            <div id="chart-temp-rh" class="w-full" style="min-height: 350px;"></div>
+        </div>
+        <div class="panel w-full">
+            <h3 class="text-sm font-bold text-slate-800 mb-2 border-b border-gray-100 pb-2">Zaman Serisi: Gaz Yoğunluğu (PPM)</h3>
+            <div id="chart-gas" class="w-full" style="min-height: 200px;"></div>
+        </div>
+    </div>
+
+    <!-- Metrik Hiyerarşisi (1 Dev Kart + 1 Kompakt Şerit) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <!-- 1. Kümülatif Finansal Risk (2x Genişlik) -->
+        <div class="panel lg:col-span-2 flex flex-col justify-between relative overflow-hidden">
+            <div class="flex justify-between items-start z-10">
+                <div>
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wide">Kümülatif Finansal Risk (Son 24 Saat)</p>
+                    <div class="flex items-baseline gap-2 mt-2">
+                        <p id="val-total-loss" class="text-5xl font-bold text-red-600 tabular-data tick-animate">₺0</p>
+                    </div>
+                    <p class="text-sm text-slate-600 mt-2 font-medium">
+                        Stres ve Ölüm Kaynaklı Yem İsrafı: <span id="val-feed-loss" class="tabular-data text-red-500 font-bold">₺0</span>
+                    </p>
+                </div>
+            </div>
+            <!-- Sparkline Chart Container -->
+            <div id="chart-loss-sparkline" class="absolute bottom-0 right-0 w-full lg:w-2/3 h-full opacity-40 mix-blend-multiply pointer-events-none"></div>
+        </div>
+
+        <!-- 2. Diğer 3 Metrik (Kompakt Şerit) -->
+        <div class="flex flex-col gap-3 justify-center">
+            <div class="panel flex items-center justify-between p-4">
+                <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Sürü Başarı Puanı</p>
+                <p id="val-epef" class="text-2xl font-bold tabular-data text-slate-800 tick-animate">--</p>
+            </div>
+            <div class="panel flex items-center justify-between p-4">
+                <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Stres Yem Kaybı</p>
+                <p id="val-fcr-penalty" class="text-2xl font-bold tabular-data text-slate-800 tick-animate">--</p>
+            </div>
+            <div class="panel flex items-center justify-between p-4">
+                <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Fan Serinletme</p>
+                <p id="val-wind-chill" class="text-2xl font-bold tabular-data text-indigo-600 tick-animate">--°C</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Aksiyon Reçetesi (Horizontal Scrollable Row) -->
+    <div class="mb-6">
+        <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            Yapay Zeka Karar Motoru: Aksiyon Reçetesi
+        </h3>
+        <div id="action-list" class="flex flex-row flex-nowrap gap-4 overflow-x-auto pb-4 snap-x w-full" style="scrollbar-width: thin;">
+            <div class="text-sm text-slate-500 whitespace-nowrap">Veri analizi bekleniyor...</div>
+        </div>
+    </div>
+
+    <!-- İç Ortam ve Bölgesel Sensörler (Yatay Düzen) -->
+    <div class="panel mb-6 flex flex-col lg:flex-row gap-6">
+        <!-- İç Ortam Genel Ortalama (Sabit Sol Taraf) -->
+        <div class="lg:w-1/4 flex-shrink-0 lg:border-r border-gray-100 lg:pr-6">
+            <h3 class="text-sm font-bold text-slate-800 mb-4 border-b border-gray-100 pb-2">İç Ortam Genel</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <p class="text-xs text-gray-500 mb-1">Sıcaklık</p>
+                    <p id="val-temp" class="text-2xl font-bold text-slate-700 tabular-data tick-animate">--°C</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 mb-1">Nem</p>
+                    <p id="val-rh" class="text-2xl font-bold text-slate-700 tabular-data tick-animate">--%</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 mb-1">Amonyak</p>
+                    <p id="val-nh3" class="text-xl font-bold text-slate-700 tabular-data tick-animate">-- ppm</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 mb-1">CO2</p>
+                    <p id="val-co2" class="text-xl font-bold text-slate-700 tabular-data tick-animate">-- ppm</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bölgesel Sensörler (Zone) (Yatay Kaydırılabilir) -->
+        <div class="flex-1 overflow-hidden flex flex-col">
+            <h3 class="text-sm font-bold text-slate-800 mb-4 border-b border-gray-100 pb-2">Bölgesel Sensörler (Zone)</h3>
+            <div id="zone-sensors-list" class="flex flex-row overflow-x-auto gap-4 pb-2 snap-x w-full" style="scrollbar-width: thin;">
+                <div class="text-xs text-gray-400">Sensör verileri bekleniyor...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sanal Operatör Canlı Kontrol Paneli -->
+    <div class="panel bg-gradient-to-r from-slate-800 to-slate-900 border-none text-white mb-6 p-6 shadow-lg">
+        <h3 class="text-sm font-bold text-slate-200 mb-4 flex items-center gap-2 border-b border-slate-700 pb-3">
+            <span class="relative flex h-3 w-3">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+            </span>
+            Sanal Operatör (SCADA) Canlı Aksiyon Paneli
+        </h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Aksiyon Logu -->
+            <div class="md:col-span-2 bg-slate-800/50 rounded-lg p-4 border border-slate-700 flex flex-col h-full">
+                <p class="text-xs text-slate-400 uppercase tracking-widest mb-2 font-semibold">Son Karar ve Geçmişi</p>
+                <div id="vo-action-history" class="flex-1 space-y-2 overflow-y-auto max-h-[120px] pr-2" style="scrollbar-width: thin; scrollbar-color: #475569 transparent;">
+                    <p class="text-sm font-mono text-green-400 leading-relaxed">
+                        Sistem başlatılıyor, bağlantı bekleniyor...
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Aktüatör Durumları -->
+            <div class="flex flex-col justify-center gap-4">
+                <div>
+                    <div class="flex justify-between items-end mb-1">
+                        <p class="text-xs text-slate-400 uppercase tracking-widest font-semibold">Aktif Fanlar</p>
+                        <p id="vo-fan-text" class="text-lg font-bold text-white leading-none">0/0</p>
+                    </div>
+                    <div class="w-full bg-slate-700 rounded-full h-2.5">
+                      <div id="vo-fan-bar" class="bg-indigo-500 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between bg-slate-800/50 p-3 rounded-lg border border-slate-700">
+                    <p class="text-xs text-slate-400 uppercase tracking-widest font-semibold">Ortam Isıtıcı</p>
+                    <div id="vo-heater-status" class="px-3 py-1 text-xs font-bold rounded bg-slate-600 text-slate-300">
+                        KAPALI
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between bg-slate-800/50 p-3 rounded-lg border border-slate-700">
+                    <p class="text-xs text-slate-400 uppercase tracking-widest font-semibold">Pad Cooling (Petek Soğutma)</p>
+                    <div id="vo-pad-status" class="px-3 py-1 text-xs font-bold rounded bg-slate-600 text-slate-300">
+                        KAPALI
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dış Ortam -->
+    <div class="panel bg-slate-50 border-dashed mb-6 md:w-1/2 lg:w-1/3">
+        <h3 class="text-sm font-bold text-slate-800 mb-4 border-b border-gray-200 pb-2">Dış Ortam</h3>
+        <div class="flex justify-between items-center mb-3">
+            <span class="text-xs font-semibold text-slate-600" id="om-location">Lokasyon Yükleniyor...</span>
+            <span class="text-[10px] bg-slate-200 text-slate-600 px-2 py-1 rounded">API Aktif</span>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <p class="text-xs text-gray-500 mb-1">Dış Sıcaklık</p>
+                <p id="om-temp" class="text-xl font-bold text-slate-700 tick-animate">--°C</p>
+            </div>
+            <div>
+                <p class="text-xs text-gray-500 mb-1">Rüzgar Hızı</p>
+                <p id="om-wind" class="text-xl font-bold text-slate-700 tick-animate">-- km/h</p>
+            </div>
+        </div>
+    </div>
+
+
+
+</div>
+
+<script src="/static/js/main.js"></script>
+</body>
+</html>

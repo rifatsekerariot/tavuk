@@ -1,0 +1,1 @@
+import paramiko; ssh=paramiko.SSHClient(); ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy()); ssh.connect('185.22.186.132', username='root', password='Qx9#Rz2#Fq8#Dd5!'); stdin, stdout, stderr = ssh.exec_command('cd /var/www/ciftlik && docker-compose logs --tail 20 web mock_sensor'); print(stdout.read().decode('utf-8')); print(stderr.read().decode('utf-8')); ssh.close()
