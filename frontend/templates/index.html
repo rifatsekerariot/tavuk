@@ -452,6 +452,36 @@ client.disconnect()</pre>
     </div>
 </div>
 
+<!-- PASSWORD CHANGE MODAL -->
+<div id="password-modal" class="fixed inset-0 z-50 hidden modal-overlay flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-modal w-full max-w-sm border border-gray-200">
+        <div class="flex justify-between items-center px-5 py-3 border-b border-gray-100">
+            <h2 class="text-sm font-semibold text-ink">Admin Şifresini Değiştir</h2>
+            <button onclick="closePasswordModal()" class="text-ink-muted hover:text-ink">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 4L4 12M4 4L12 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+        </div>
+        <form onsubmit="saveNewPassword(event)">
+            <div class="p-5 space-y-4">
+                <div>
+                    <label class="block text-[11px] font-medium text-ink-muted mb-1">Eski Şifre</label>
+                    <input type="password" id="old_password" required class="settings-input">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-medium text-ink-muted mb-1">Yeni Şifre</label>
+                    <input type="password" id="new_password" required class="settings-input">
+                </div>
+                <div id="password-error" class="hidden text-[11px] text-red-600 font-medium"></div>
+                <div id="password-success" class="hidden text-[11px] text-emerald-600 font-medium">Şifre başarıyla güncellendi.</div>
+            </div>
+            <div class="px-5 py-3 border-t border-gray-100 bg-gray-50 flex justify-end gap-2 rounded-b-lg">
+                <button type="button" onclick="closePasswordModal()" class="btn-secondary">İptal</button>
+                <button type="submit" class="btn-primary">Güncelle</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- MAIN LAYOUT -->
 <div class="max-w-[1280px] mx-auto px-4 md:px-6 py-6 space-y-6">
 
@@ -463,6 +493,7 @@ client.disconnect()</pre>
                 <h1 class="text-base font-semibold tracking-tight text-ink">ARIOT DSS</h1>
                 <span class="text-gray-300 mx-1">/</span>
                 <span id="ui-phase-badge" class="text-sm font-bold text-white bg-emerald-600 px-3 py-1 rounded-full shadow-sm">--</span>
+                <span id="ui-role-badge" class="text-[10px] font-bold px-2 py-0.5 rounded shadow-sm bg-indigo-100 text-indigo-700 uppercase">--</span>
             </div>
             <div class="flex items-center gap-3 text-[11px] text-ink-muted">
                 <span id="ui-target-temp" class="tabular-data">Hedef: --°C</span>
@@ -481,16 +512,18 @@ client.disconnect()</pre>
                 <span id="top-last-update" class="text-[10px] text-ink-light tabular-data">--:--:--</span>
             </div>
             
-            <label class="flex items-center gap-1.5 cursor-pointer hover:text-ink transition-colors mr-1">
+            <label id="ui-demo-mode-container" class="flex items-center gap-1.5 cursor-pointer hover:text-ink transition-colors mr-1">
                 <span>Demo Modu</span>
                 <input type="checkbox" id="ui-demo-toggle" class="sr-only peer" onchange="toggleDemoMode(this)">
                 <div class="w-7 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[12px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500 relative"></div>
             </label>
 
-            <button onclick="openSetup()" class="hover:text-ink transition-colors">Kurulum</button>
-            <button onclick="openSettings()" class="hover:text-ink transition-colors">Ayarlar</button>
-            <button onclick="openIotSetup()" class="hover:text-ink transition-colors">IoT Setup</button>
-            <button onclick="openMortalityModal()" class="hover:text-red-600 transition-colors">Fire</button>
+            <button id="btn-setup" onclick="openSetup()" class="hover:text-ink transition-colors">Kurulum</button>
+            <button id="btn-settings" onclick="openSettings()" class="hover:text-ink transition-colors">Ayarlar</button>
+            <button id="btn-iot-setup" onclick="openIotSetup()" class="hover:text-ink transition-colors">IoT Setup</button>
+            <button id="btn-fire" onclick="openMortalityModal()" class="hover:text-red-600 transition-colors">Fire</button>
+            <button id="btn-change-pwd" onclick="openPasswordModal()" class="hover:text-ink transition-colors hidden">Şifre Değiştir</button>
+            <button onclick="handleLogout()" class="text-red-600 hover:text-red-700 transition-colors">Çıkış Yap</button>
         </div>
     </header>
 

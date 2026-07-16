@@ -27,6 +27,7 @@ files_to_upload = [
     ("d:/Antigravity/tavuk/database/models.py", f"{project_dir}/database/models.py"),
     ("d:/Antigravity/tavuk/api/main.py", f"{project_dir}/api/main.py"),
     ("d:/Antigravity/tavuk/frontend/templates/index.html", f"{project_dir}/frontend/templates/index.html"),
+    ("d:/Antigravity/tavuk/frontend/templates/login.html", f"{project_dir}/frontend/templates/login.html"),
     ("d:/Antigravity/tavuk/frontend/templates/landing.html", f"{project_dir}/frontend/templates/landing.html"),
     ("d:/Antigravity/tavuk/frontend/templates/manual.html", f"{project_dir}/frontend/templates/manual.html"),
     ("d:/Antigravity/tavuk/frontend/static/js/main.js", f"{project_dir}/frontend/static/js/main.js"),
@@ -36,7 +37,8 @@ files_to_upload = [
     ("d:/Antigravity/tavuk/requirements.txt", f"{project_dir}/requirements.txt"),
     ("d:/Antigravity/tavuk/Dockerfile", f"{project_dir}/Dockerfile"),
     ("d:/Antigravity/tavuk/mock_mqtt.py", f"{project_dir}/mock_mqtt.py"),
-    ("d:/Antigravity/tavuk/mock_scada_controller.py", f"{project_dir}/mock_scada_controller.py")
+    ("d:/Antigravity/tavuk/mock_scada_controller.py", f"{project_dir}/mock_scada_controller.py"),
+    ("d:/Antigravity/tavuk/.env", f"{project_dir}/.env")
 ]
 
 for local_path, remote_path in files_to_upload:

@@ -12,6 +12,8 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/ariot
       - MQTT_BROKER=mqtt
       - MQTT_PORT=1883
+    env_file:
+      - .env
     depends_on:
       - db
       - mqtt

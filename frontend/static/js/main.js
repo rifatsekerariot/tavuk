@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchHistory();
     // Start WebSocket for real-time push instead of polling
     initWebSocket();
+    applyUserRole();
 });
 
 let ws;
@@ -1070,3 +1071,109 @@ function fetchAlarms() {
             list.innerHTML = '<div class="text-[12px] text-red-600">Alarmlar yüklenirken hata oluştu.</div>';
         });
 }
+
+// --------------------------------------------------
+// ROLE BASED ACCESS CONTROL & AUTHENTICATION HANDLERS
+// --------------------------------------------------
+function applyUserRole() {
+    fetch('/api/auth/me')
+        .then(r => {
+            if (!r.ok) {
+                window.location.href = '/login';
+                return;
+            }
+            return r.json();
+        })
+        .then(user => {
+            if (!user) return;
+            const role = user.role;
+            const username = user.username;
+            
+            localStorage.setItem('user_role', role);
+            localStorage.setItem('username', username);
+            
+            const roleBadge = document.getElementById('ui-role-badge');
+            if (roleBadge) {
+                if (role === 'admin') {
+                    roleBadge.innerText = 'ADMİN (TAM YETKİ)';
+                    roleBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded shadow-sm bg-sky-100 text-sky-700 uppercase';
+                    
+                    const changePwdBtn = document.getElementById('btn-change-pwd');
+                    if (changePwdBtn) changePwdBtn.classList.remove('hidden');
+                } else {
+                    roleBadge.innerText = 'DEMO (SALT OKUR)';
+                    roleBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded shadow-sm bg-slate-100 text-slate-600 uppercase';
+                    
+                    const hideElements = ['btn-setup', 'btn-settings', 'btn-fire', 'ui-demo-mode-container'];
+                    hideElements.forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.classList.add('hidden');
+                    });
+                }
+            }
+        })
+        .catch(err => {
+            console.error("Auth error:", err);
+            window.location.href = '/login';
+        });
+}
+
+function handleLogout() {
+    fetch('/api/auth/logout', { method: 'POST' })
+        .then(() => {
+            localStorage.removeItem('user_role');
+            localStorage.removeItem('username');
+            window.location.href = '/login';
+        })
+        .catch(err => console.error("Logout failed:", err));
+}
+
+function openPasswordModal() {
+    document.getElementById('old_password').value = '';
+    document.getElementById('new_password').value = '';
+    document.getElementById('password-error').classList.add('hidden');
+    document.getElementById('password-success').classList.add('hidden');
+    document.getElementById('password-modal').classList.remove('hidden');
+}
+
+function closePasswordModal() {
+    document.getElementById('password-modal').classList.add('hidden');
+}
+
+function saveNewPassword(e) {
+    e.preventDefault();
+    const oldPwd = document.getElementById('old_password').value;
+    const newPwd = document.getElementById('new_password').value;
+    const errEl = document.getElementById('password-error');
+    const succEl = document.getElementById('password-success');
+
+    errEl.classList.add('hidden');
+    succEl.classList.add('hidden');
+
+    fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ old_password: oldPwd, new_password: newPwd })
+    })
+    .then(async r => {
+        const res = await r.json();
+        if (!r.ok) throw new Error(res.detail || 'Şifre güncellenemedi.');
+        return res;
+    })
+    .then(res => {
+        succEl.innerText = res.message;
+        succEl.classList.remove('hidden');
+        setTimeout(closePasswordModal, 2000);
+    })
+    .catch(err => {
+        errEl.innerText = err.message;
+        errEl.classList.remove('hidden');
+    });
+}
+
+window.applyUserRole = applyUserRole;
+window.handleLogout = handleLogout;
+window.openPasswordModal = openPasswordModal;
+window.closePasswordModal = closePasswordModal;
+window.saveNewPassword = saveNewPassword;
+

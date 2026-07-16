@@ -1,5 +1,5 @@
-from fastapi import FastAPI, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Depends, Request, HTTPException, status
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
@@ -13,9 +13,12 @@ import httpx
 import time
 import statistics
 from database.config import get_db, engine, Base
-from database.models import FarmSettings, IoTData, AlarmHistory, Device
+from database.models import FarmSettings, IoTData, AlarmHistory, Device, User
 from core.mqtt_listener import start_mqtt_listener, virtual_operator_state
 from core.biology import calculate_biology_and_finance, calculate_dynamic_weight
+import jwt
+import bcrypt
+import os
 
 from sqlalchemy import text
 try:
@@ -35,6 +38,30 @@ except Exception:
     pass
 
 Base.metadata.create_all(bind=engine)
+
+def hash_password(password: str) -> str:
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    try:
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception:
+        return False
+
+def create_jwt(username: str, role: str) -> str:
+    payload = {
+        "sub": username,
+        "role": role,
+        "exp": datetime.utcnow() + timedelta(days=1)
+    }
+    return jwt.encode(payload, "supersecretjwtkey1234!", algorithm="HS256")
+
+def decode_jwt(token: str) -> dict:
+    try:
+        return jwt.decode(token, "supersecretjwtkey1234!", algorithms=["HS256"])
+    except Exception:
+        return None
 
 def seed_mock_devices():
     from database.config import SessionLocal
@@ -59,6 +86,27 @@ def seed_mock_devices():
         db.close()
 
 seed_mock_devices()
+
+def seed_users():
+    from database.config import SessionLocal
+    db = SessionLocal()
+    try:
+        if db.query(User).count() == 0:
+            admin_pwd = os.getenv("ADMIN_PASSWORD", "Adana4455*")
+            admin_hash = hash_password(admin_pwd)
+            admin_user = User(username="admin", password_hash=admin_hash, role="admin")
+            db.add(admin_user)
+            
+            demo_hash = hash_password("demo123")
+            demo_user = User(username="demo", password_hash=demo_hash, role="demo")
+            db.add(demo_user)
+            db.commit()
+    except Exception as e:
+        print(f"Error seeding users: {e}")
+    finally:
+        db.close()
+
+seed_users()
 
 app = FastAPI(title='ARIOT IoT Dashboard')
 
@@ -122,27 +170,79 @@ class SettingsUpdate(BaseModel):
     demo_mode: Optional[bool] = None
 
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class PasswordChangeRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+def get_current_user_from_token(token: str, db: Session) -> Optional[User]:
+    payload = decode_jwt(token)
+    if not payload:
+        return None
+    username = payload.get("sub")
+    if not username:
+        return None
+    return db.query(User).filter(User.username == username).first()
+
+def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
+    token = request.cookies.get("access_token")
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    user = get_current_user_from_token(token, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid session")
+    return user
+
+def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin yetkisi gereklidir")
+    return current_user
+
 @app.get('/', response_class=HTMLResponse)
 def read_root():
     with open('frontend/templates/landing.html', encoding='utf-8') as f:
         content = f.read()
     return HTMLResponse(content=content)
 
+@app.get('/login', response_class=HTMLResponse)
+def read_login(request: Request, db: Session = Depends(get_db)):
+    token = request.cookies.get("access_token")
+    if token and get_current_user_from_token(token, db):
+        return RedirectResponse(url="/demo", status_code=303)
+    with open('frontend/templates/login.html', encoding='utf-8') as f:
+        content = f.read()
+    return HTMLResponse(content=content)
+
 @app.get('/demo', response_class=HTMLResponse)
-def read_demo():
-    print("DEMO ENDPOINT CALLED - NEW CODE IS RUNNING")
+def read_demo(request: Request, db: Session = Depends(get_db)):
+    token = request.cookies.get("access_token")
+    if not token or not get_current_user_from_token(token, db):
+        return RedirectResponse(url="/login", status_code=303)
     with open('frontend/templates/index.html', encoding='utf-8') as f:
         content = f.read()
     return HTMLResponse(content=content)
 
 @app.get('/manual', response_class=HTMLResponse)
-def read_manual():
+def read_manual(request: Request, db: Session = Depends(get_db)):
+    token = request.cookies.get("access_token")
+    if not token or not get_current_user_from_token(token, db):
+        return RedirectResponse(url="/login", status_code=303)
     with open('frontend/templates/manual.html', encoding='utf-8') as f:
         content = f.read()
     return HTMLResponse(content=content)
 
 @app.get('/scada', response_class=HTMLResponse)
-def read_scada():
+def read_scada(request: Request, db: Session = Depends(get_db)):
+    token = request.cookies.get("access_token")
+    if not token or not get_current_user_from_token(token, db):
+        return RedirectResponse(url="/login", status_code=303)
     with open('frontend/templates/scada.html', encoding='utf-8') as f:
         content = f.read()
     return HTMLResponse(content=content)
@@ -150,6 +250,43 @@ def read_scada():
 @app.get("/routes")
 def get_routes():
     return [{"path": route.path, "name": route.name} for route in app.routes]
+
+@app.post('/api/auth/login')
+def login_endpoint(data: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == data.username).first()
+    if not user or not verify_password(data.password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Hatalı kullanıcı adı veya şifre")
+    token = create_jwt(user.username, user.role)
+    response = JSONResponse(content={"status": "ok", "role": user.role, "username": user.username})
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        max_age=86400,
+        samesite="lax",
+        secure=False
+    )
+    return response
+
+@app.post('/api/auth/logout')
+def logout_endpoint():
+    response = JSONResponse(content={"status": "ok"})
+    response.delete_cookie("access_token")
+    return response
+
+@app.post('/api/auth/change-password')
+def change_password_endpoint(data: PasswordChangeRequest, current_user: User = Depends(get_admin_user), db: Session = Depends(get_db)):
+    if not verify_password(data.old_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Mevcut şifre hatalı")
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Yeni şifre en az 6 karakter olmalıdır")
+    current_user.password_hash = hash_password(data.new_password)
+    db.commit()
+    return {"status": "ok", "message": "Şifre başarıyla değiştirildi"}
+
+@app.get('/api/auth/me')
+def get_me_endpoint(current_user: User = Depends(get_current_user)):
+    return {"username": current_user.username, "role": current_user.role}
 
 
 def get_openmeteo_data(lat, lon):
@@ -572,7 +709,7 @@ def get_settings(db: Session = Depends(get_db)):
 
 
 @app.post('/api/settings')
-def update_settings(data: SettingsUpdate, db: Session = Depends(get_db)):
+def update_settings(data: SettingsUpdate, current_user: User = Depends(get_admin_user), db: Session = Depends(get_db)):
     settings = db.query(FarmSettings).first()
     if not settings:
         settings = FarmSettings()
@@ -596,7 +733,7 @@ class MortalityReport(BaseModel):
     dead_birds: int
 
 @app.post('/api/mortality/report')
-def report_mortality(data: MortalityReport, db: Session = Depends(get_db)):
+def report_mortality(data: MortalityReport, current_user: User = Depends(get_admin_user), db: Session = Depends(get_db)):
     settings = db.query(FarmSettings).first()
     if not settings:
         return {'status': 'error', 'message': 'Ayarlar bulunamadı.'}
@@ -615,7 +752,7 @@ def report_mortality(data: MortalityReport, db: Session = Depends(get_db)):
     }
 
 @app.post('/api/settings/reset')
-def reset_mock_data(db: Session = Depends(get_db)):
+def reset_mock_data(current_user: User = Depends(get_admin_user), db: Session = Depends(get_db)):
     try:
         from database.models import IoTData, AlarmHistory, FarmSettings
         db.query(IoTData).delete()

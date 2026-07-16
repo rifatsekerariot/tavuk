@@ -9,4 +9,5 @@ python-multipart>=0.0.6
 psycopg2-binary>=2.9.9
 paho-mqtt>=2.1.0
 httpx>=0.24.0
-websockets>=11.0.3
+pyjwt>=2.8.0
+bcrypt>=4.1.0
